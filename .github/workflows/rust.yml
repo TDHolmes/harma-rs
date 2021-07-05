@@ -29,7 +29,4 @@ jobs:
       run: |
         cd pensel
         cargo build
-    - name: Test - docs
-      run: |
-        cd pensel
-        cargo test --doc
+        cargo clippy

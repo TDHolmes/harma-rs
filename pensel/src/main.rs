@@ -2,7 +2,6 @@
 #![no_main]
 
 use panic_halt as _;
-use rtic;
 
 extern crate feather_m0 as bsp;
 
