@@ -2,9 +2,9 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -25,12 +25,11 @@ jobs:
         components: clippy
     - name: Checkout Sources
       uses: actions/checkout@v2
-    - name: Build
-      run: cargo build
+    - name: Build Pensel
+      run: |
+        cd pensel
+        cargo build
     - name: Test - docs
-      run: cargo test --doc
-    - name: Clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-features
+      run: |
+        cd pensel
+        cargo test --doc
