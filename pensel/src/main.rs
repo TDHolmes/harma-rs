@@ -63,7 +63,6 @@ mod app {
             pins.usb_dp,
         ));
         let bus_allocator = USB_ALLOCATOR.as_ref().unwrap();
-
         let usb_serial = SerialPort::new(&bus_allocator);
         let usb_dev = UsbDeviceBuilder::new(&bus_allocator, UsbVidPid(0x16c0, 0x27dd))
             .manufacturer("Fake company")
@@ -72,16 +71,15 @@ mod app {
             .device_class(USB_CLASS_CDC)
             .build();
         let usb_serial = usbserial::UsbSerial::new(usb_serial, usb_dev);
-
-        // ... Red LED to blink
-        let red_led: bsp::RedLed = pins.d13.into();
-        blink::spawn().unwrap();
-
         unsafe {
             // enable interrupts
             core.NVIC.set_priority(interrupt::USB, 1);
             NVIC::unmask(interrupt::USB);
         }
+
+        // ... Red LED to blink
+        let red_led: bsp::RedLed = pins.d13.into();
+        blink::spawn().unwrap();
 
         (
             init::LateResources {
@@ -103,6 +101,9 @@ mod app {
 
     #[task(binds = USB, resources=[usb_serial], priority = 2)]
     fn poll_usb(mut cx: poll_usb::Context) {
-        cx.resources.usb_serial.lock(|usb_serial| usb_serial.poll());
+        let mut read_buffer: [u8; 32] = [0; 32];
+        cx.resources
+            .usb_serial
+            .lock(|usb_serial| usb_serial.poll(&mut read_buffer));
     }
 }

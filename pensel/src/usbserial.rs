@@ -20,8 +20,15 @@ impl<'a> UsbSerial<'a> {
         }
     }
 
-    pub fn poll(&mut self) {
+    pub fn poll(&mut self, read_buffer: &mut [u8]) -> usize {
+        let mut total_bytes_read = 0;
         self.usb_dev.poll(&mut [&mut self.usb_serial]);
+
+        if let Ok(bytes_read) = self.usb_serial.read(read_buffer) {
+            total_bytes_read = bytes_read;
+        }
+
+        total_bytes_read
     }
 
     /// Writes a message over USB serial
