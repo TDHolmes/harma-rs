@@ -6,25 +6,28 @@ name = "pensel"
 version = "0.1.0"
 
 [dependencies]
-feather_m0 = {features = ["unproven", "rtic", "rtic-monotonic"], git="https://github.com/atsamd-rs/atsamd/"}
 cortex-m = "0.6"
 cortex-m-rt = "0.6"
-panic-halt = {version = "0.2"}
+panic-halt = "0.2"
 rtic-monotonic = "=0.1.0-alpha.1"
 
 # dependencies for usb serial printing
-usb-device = {version = "0.2", optional = true}
-usbd-serial = {version = "0.1", optional = true}
-heapless = {version = "0.7", optional = true}
-ufmt = {version = "0.1", optional = true}
-ufmt-utils = {version = "0.1", optional = true}
+usb-device = "0.2"
+usbd-serial = "0.1"
+heapless = "0.7"
+ufmt = "0.1"
+ufmt-utils = "0.1"
 
 [dependencies.cortex-m-rtic]
 version = "0.6.0-alpha.4"
 
+[dependencies.feather_m0]
+features = ["unproven", "rtic", "rtic-monotonic", "usb"]
+git = "https://github.com/atsamd-rs/atsamd/"
+
+
 [features]
 default = []
-usbserial = ["heapless", "ufmt", "ufmt-utils", "usb-device", "usbd-serial", "feather_m0/usb"]
 
 # this lets you use `cargo fix`!
 [[bin]]
