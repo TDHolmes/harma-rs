@@ -31,6 +31,13 @@ impl<'a> UsbSerial<'a> {
         total_bytes_read
     }
 
+    pub fn write(&mut self, bytes: &[u8]) -> usize {
+        match self.usb_serial.write(bytes) {
+            Ok(count) => count,
+            Err(_) => 0,
+        }
+    }
+
     /// Writes a message over USB serial
     ///
     /// # Arguments
