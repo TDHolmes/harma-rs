@@ -9,7 +9,6 @@ version = "0.1.0"
 cortex-m = "0.6"
 cortex-m-rt = "0.6"
 panic-halt = "0.2"
-rtic-monotonic = "=0.1.0-alpha.1"
 
 # dependencies for usb serial printing
 usb-device = "0.2"
@@ -18,13 +17,12 @@ heapless = "0.7"
 ufmt = "0.1"
 ufmt-utils = "0.1"
 menu = "0.3"
-
-[dependencies.cortex-m-rtic]
-version = "0.6.0-alpha.4"
+bno055 = "0.3"
 
 [dependencies.feather_m0]
-features = ["unproven", "rtic", "rtic-monotonic", "usb"]
+features = ["unproven", "usb"]
 git = "https://github.com/atsamd-rs/atsamd/"
+# version = "0.9"
 
 
 [features]
