@@ -7,13 +7,13 @@ pub struct CliOutput<const N: usize> {
     write_queue: heapless::spsc::Producer<'static, u8, N>,
 }
 
-impl<const N: usize> CliOutput<N> {
+impl<const N: usize> CliOutput<{ N }> {
     pub fn new(write_queue: heapless::spsc::Producer<'static, u8, N>) -> CliOutput<N> {
         CliOutput { write_queue }
     }
 }
 
-impl<const N: usize> core::fmt::Write for CliOutput<N> {
+impl<const N: usize> core::fmt::Write for CliOutput<{ N }> {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
         for byte in s.bytes() {
             if self.write_queue.enqueue(byte).is_err() {

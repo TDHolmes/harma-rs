@@ -1,175 +1,100 @@
 #![no_std]
 #![no_main]
 
+use pensel::{bsp, hal, pac, serial_write, usb_serial::UsbSerial};
+
+use cortex_m::{asm::wfi, peripheral::NVIC};
 use panic_halt as _;
 
-#[rtic::app(device = bsp::pac, peripherals = true, dispatchers = [EVSYS])]
-mod app {
-    use pensel::cli;
-    use pensel::prelude::*;
-    use pensel::usbserial;
+use bsp::entry;
+use hal::{clock::GenericClockController, delay::Delay, prelude::*};
+use pac::{interrupt, CorePeripherals, Peripherals};
 
-    use cortex_m::peripheral::NVIC;
-    use hal::clock::{ClockGenId, ClockSource, GenericClockController};
-    use hal::gpio::v2 as gpio;
-    use hal::pac::{interrupt, Peripherals};
-    use hal::prelude::*;
-    use hal::rtc::{Count32Mode, Rtc};
-    use rtic_monotonic::Extensions;
+static mut USB_SERIAL: Option<UsbSerial> = None;
 
-    use hal::usb::UsbBus;
-    use usb_device::bus::UsbBusAllocator;
-    use usb_device::prelude::*;
-    use usbd_serial::{SerialPort, USB_CLASS_CDC};
+#[entry]
+fn main() -> ! {
+    // initialize core peripherals
+    let mut peripherals = Peripherals::take().unwrap();
+    let mut core = CorePeripherals::take().unwrap();
+    let mut clocks = GenericClockController::with_internal_32kosc(
+        peripherals.GCLK,
+        &mut peripherals.PM,
+        &mut peripherals.SYSCTRL,
+        &mut peripherals.NVMCTRL,
+    );
+    let mut delay = Delay::new(core.SYST, &mut clocks);
 
-    macro_rules! write_string {
-        ($cx:tt, $($args:tt)*) => {{
-            $cx.resources
-                .usb_serial
-                .lock(|usb_serial| pensel::serial_write!(usb_serial, $($args)*));
-        }};
-    }
+    // initialize GPIOs
+    let pins = bsp::Pins::new(peripherals.PORT);
+    let mut red_led: bsp::RedLed = pins.d13.into();
+    let i2c = bsp::i2c_master(
+        &mut clocks,
+        400.khz(),
+        peripherals.SERCOM3,
+        &mut peripherals.PM,
+        pins.sda,
+        pins.scl,
+    );
 
-    macro_rules! write_bytes {
-        ($cx:tt, $message:expr) => {{
-            $cx.resources
-                .usb_serial
-                .lock(|usb_serial| usb_serial.write($message));
-        }};
-    }
-
-    #[resources]
-    struct Resources {
-        #[lock_free]
-        red_led: gpio::Pin<gpio::PA17, gpio::Output<gpio::PushPull>>,
-        usb_serial: usbserial::UsbSerial<'static>,
-        #[lock_free]
-        cli_output: heapless::spsc::Consumer<'static, u8, { cli::CLI_QUEUE_SIZE }>,
-        #[lock_free]
-        cli_runner: menu::Runner<'static, cli::CliOutput<{ cli::CLI_QUEUE_SIZE }>>,
-        #[lock_free]
-        cli_user_input_in: heapless::spsc::Producer<'static, u8, { cli::CLI_QUEUE_SIZE }>,
-        #[lock_free]
-        cli_user_input_out: heapless::spsc::Consumer<'static, u8, { cli::CLI_QUEUE_SIZE }>,
-    }
-
-    #[monotonic(binds = RTC, default = true)]
-    type RtcMonotonic = Rtc<Count32Mode>;
-
-    #[init]
-    fn init(cx: init::Context) -> (init::LateResources, init::Monotonics) {
-        // some static muts that can be safely used later on because RTIC is great
-        static mut USB_ALLOCATOR: Option<UsbBusAllocator<UsbBus>> = None;
-        static mut CLI_WRITE_QUEUE: heapless::spsc::Queue<u8, { cli::CLI_QUEUE_SIZE }> =
-            heapless::spsc::Queue::new();
-        static mut CLI_INPUT_QUEUE: heapless::spsc::Queue<u8, { cli::CLI_QUEUE_SIZE }> =
-            heapless::spsc::Queue::new();
-        static mut CLI_BUFFER: [u8; cli::CLI_QUEUE_SIZE] = [0; cli::CLI_QUEUE_SIZE];
-
-        // setup some basic peripherals...
-        let mut peripherals: Peripherals = cx.device;
-        let pins = bsp::Pins::new(peripherals.PORT);
-        let mut core: rtic::export::Peripherals = cx.core;
-        let mut clocks = GenericClockController::with_external_32kosc(
-            peripherals.GCLK,
-            &mut peripherals.PM,
-            &mut peripherals.SYSCTRL,
-            &mut peripherals.NVMCTRL,
-        );
-
-        // ... configure RTC
-        let rtc_clock_src = clocks
-            .configure_gclk_divider_and_source(ClockGenId::GCLK2, 1, ClockSource::XOSC32K, false)
-            .unwrap();
-        clocks.configure_standby(ClockGenId::GCLK2, true);
-        let rtc_clock = clocks.rtc(&rtc_clock_src).unwrap();
-        let rtc = Rtc::count32_mode(peripherals.RTC, rtc_clock.freq(), &mut peripherals.PM);
-
-        // ... setup USB stuff
-        *USB_ALLOCATOR = Some(bsp::usb_allocator(
+    // initialize USB
+    unsafe {
+        USB_SERIAL = Some(UsbSerial::new(
             peripherals.USB,
             &mut clocks,
             &mut peripherals.PM,
             pins.usb_dm,
             pins.usb_dp,
         ));
-        let bus_allocator = USB_ALLOCATOR.as_ref().unwrap();
-        let usb_serial = SerialPort::new(&bus_allocator);
-        let usb_dev = UsbDeviceBuilder::new(&bus_allocator, UsbVidPid(0x16c0, 0x27dd))
-            .manufacturer("Fake company")
-            .product("Serial port")
-            .serial_number("TEST")
-            .device_class(USB_CLASS_CDC)
-            .build();
-        let usb_serial = usbserial::UsbSerial::new(usb_serial, usb_dev);
-        unsafe {
-            // enable interrupts
-            core.NVIC.set_priority(interrupt::USB, 1);
-            NVIC::unmask(interrupt::USB);
-        }
-
-        // ... Red LED to blink
-        let red_led: bsp::RedLed = pins.d13.into();
-        blink::spawn().unwrap();
-
-        // CLI
-        let (cli_producer, cli_output) = CLI_WRITE_QUEUE.split();
-        let (cli_user_input_in, cli_user_input_out) = CLI_INPUT_QUEUE.split();
-        let cli_writer = cli::CliOutput::new(cli_producer);
-        let cli_runner = menu::Runner::new(&cli::ROOT_MENU, CLI_BUFFER, cli_writer);
-
-        (
-            init::LateResources {
-                red_led,
-                usb_serial,
-                cli_output,
-                cli_runner,
-                cli_user_input_in,
-                cli_user_input_out,
-            },
-            init::Monotonics(rtc),
-        )
+        core.NVIC.set_priority(interrupt::USB, 1);
+        NVIC::unmask(interrupt::USB);
     }
 
-    #[idle(resources = [usb_serial, cli_output, cli_runner, cli_user_input_out])]
-    fn idle(mut cx: idle::Context) -> ! {
-        let cli_user_input = cx.resources.cli_user_input_out;
-        let cli_runner = cx.resources.cli_runner;
-        let cli_output = cx.resources.cli_output;
+    // initialize the IMU
+    let mut imu = bno055::Bno055::new(i2c).with_alternative_address();
+    if let Err(err) = imu.init(&mut delay) {
+        handle_bno_err(&err, &mut delay);
+    }
+    imu.set_mode(bno055::BNO055OperationMode::NDOF, &mut delay)
+        .unwrap();
 
-        loop {
-            while let Some(byte) = cli_user_input.dequeue() {
-                cli_runner.input_byte(byte);
-            }
-
-            while let Some(byte) = cli_output.dequeue() {
-                write_bytes!(cx, &[byte]);
-            }
-
-            cortex_m::asm::wfi();
+    // perpetually read out angle data
+    loop {
+        let angles_res = imu.gravity();
+        if let Ok(angles) = angles_res {
+            serial_write!(
+                USB_SERIAL,
+                "{}, {}, {}\r\n",
+                (angles.x * 1000.) as isize,
+                (angles.y * 1000.) as isize,
+                (angles.z * 1000.) as isize
+            );
         }
     }
+}
 
-    #[task(resources = [red_led])]
-    fn blink(cx: blink::Context) {
-        cx.resources.red_led.toggle().unwrap();
-        blink::spawn_after(1_u32.seconds()).ok();
-    }
-
-    #[task(binds = USB, resources=[usb_serial, cli_user_input_in], priority = 2)]
-    fn poll_usb(mut cx: poll_usb::Context) {
-        let mut read_buffer: [u8; 32] = [0; 32];
-        let bytes_read = cx
-            .resources
-            .usb_serial
-            .lock(|usb_serial| usb_serial.poll(&mut read_buffer));
-
-        if bytes_read != 0 {
-            for byte in &read_buffer[0..bytes_read] {
-                if cx.resources.cli_user_input_in.enqueue(*byte).is_err() {
-                    write_string!(cx, "Err!\r\n");
-                }
+fn handle_bno_err(error: &bno055::Error<hal::sercom::v1::I2CError>, delay: &mut Delay) -> ! {
+    loop {
+        delay.delay_ms(500_u32);
+        serial_write!(USB_SERIAL, "imu err: ");
+        match error {
+            bno055::Error::I2c(hal::sercom::v1::I2CError::Nack) => {
+                serial_write!(USB_SERIAL, "I2c nak\r\n")
             }
-        }
+            bno055::Error::I2c(_) => serial_write!(USB_SERIAL, "I2c\r\n"),
+            bno055::Error::InvalidChipId(_) => serial_write!(USB_SERIAL, "InvalidChipId\r\n"),
+            bno055::Error::InvalidMode => serial_write!(USB_SERIAL, "InvalidMode\r\n"),
+        };
+    }
+}
+
+#[interrupt]
+fn USB() {
+    let mut buf = [0u8; 64];
+    unsafe {
+        USB_SERIAL.as_mut().map(|serial| {
+            let bytes_read = serial.poll(&mut buf);
+            serial.write(&buf[0..bytes_read]);
+        });
     }
 }
