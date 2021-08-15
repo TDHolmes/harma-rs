@@ -36,4 +36,5 @@ jobs:
         sudo apt-get install -y libudev-dev
         cd notepad
         cargo build --examples
+        cargo test
         cargo clippy
