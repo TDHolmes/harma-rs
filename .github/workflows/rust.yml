@@ -30,3 +30,8 @@ jobs:
         cd pensel
         cargo build
         cargo clippy
+    - name: Build notepad
+      run: |
+        cd notepad
+        cargo build --examples
+        cargo clippy

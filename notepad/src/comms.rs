@@ -79,13 +79,12 @@ impl PenselSerial {
             // check if we can reset our indices, or need to move an unparsed chunk forward
             if read_index == write_index {
                 write_index = 0;
-                read_index = 0;
             } else {
                 let unread_range = read_index..write_index;
                 write_index = unread_range.len();
                 serial_read_buf.copy_within(unread_range, 0);
-                read_index = 0;
             }
+            read_index = 0;
         }
     }
 }
