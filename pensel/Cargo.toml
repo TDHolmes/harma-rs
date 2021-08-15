@@ -4,6 +4,7 @@ edition = "2018"
 readme = "README.md"
 name = "pensel"
 version = "0.1.0"
+description = "Orientation tracking pensel, mainly for robot assisted soldering"
 
 [dependencies]
 cortex-m = "0.6"

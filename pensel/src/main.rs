@@ -60,14 +60,27 @@ fn main() -> ! {
 
     // perpetually read out angle data
     loop {
+        // Get gravity vector
         let angles_res = imu.gravity();
         if let Ok(angles) = angles_res {
             serial_write!(
                 USB_SERIAL,
-                "{}, {}, {}\r\n",
+                "G:{},{},{}\n",
                 (angles.x * 1000.) as isize,
                 (angles.y * 1000.) as isize,
                 (angles.z * 1000.) as isize
+            );
+        }
+
+        // get acceleration
+        let lin_accel = imu.linear_acceleration();
+        if let Ok(acc) = lin_accel {
+            serial_write!(
+                USB_SERIAL,
+                "A:{},{},{}\n",
+                (acc.x * 1000.) as isize,
+                (acc.y * 1000.) as isize,
+                (acc.z * 1000.) as isize
             );
         }
     }

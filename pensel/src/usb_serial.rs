@@ -30,7 +30,7 @@ impl<'a> UsbSerial<'a> {
         let usb_dev = UsbDeviceBuilder::new(usb_allocator, UsbVidPid(0x16c0, 0x27dd))
             .manufacturer("Fake company")
             .product("Serial port")
-            .serial_number("TEST")
+            .serial_number("PENSEL")
             .device_class(USB_CLASS_CDC)
             .build();
         UsbSerial {
