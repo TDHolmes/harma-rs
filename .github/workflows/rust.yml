@@ -32,7 +32,8 @@ jobs:
         cargo clippy
     - name: Build notepad
       run: |
-        sudo apt-get install -y libudev
+        sudo apt-get clean && sudo apt-get update
+        sudo apt-get install -y libudev-dev
         cd notepad
         cargo build --examples
         cargo clippy
