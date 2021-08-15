@@ -1,11 +1,20 @@
 //! Mock serial port for unit testing
+use std::io::Write;
 
-#[derive(Clone, Copy)]
-pub struct MockSerial;
+#[derive(Clone)]
+pub struct MockSerial {
+    buffer: Vec<u8>,
+}
+
+impl std::default::Default for MockSerial {
+    fn default() -> Self {
+        MockSerial { buffer: vec![] }
+    }
+}
 
 impl std::io::Write for MockSerial {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        Ok(buf.len())
+        Ok(self.buffer.write(buf)?)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
@@ -14,8 +23,11 @@ impl std::io::Write for MockSerial {
 }
 
 impl std::io::Read for MockSerial {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        Ok(buf.len())
+    fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
+        let bytes_read = buf.write(&self.buffer[..])?;
+        let _ = self.buffer.drain(..bytes_read).collect::<Vec<u8>>();
+
+        Ok(bytes_read)
     }
 }
 
@@ -97,5 +109,76 @@ impl serialport::SerialPort for MockSerial {
     }
     fn clear_break(&self) -> serialport::Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_mock_serial {
+    use super::*;
+    use serialport::SerialPort;
+
+    #[test]
+    fn call_functions() {
+        let mut ms = MockSerial::default();
+
+        ms.name();
+        ms.baud_rate().unwrap();
+        ms.data_bits().unwrap();
+        ms.flow_control().unwrap();
+        ms.parity().unwrap();
+        ms.stop_bits().unwrap();
+        ms.timeout();
+        ms.set_baud_rate(42).unwrap();
+        ms.set_data_bits(serialport::DataBits::Seven).unwrap();
+        ms.set_flow_control(serialport::FlowControl::None).unwrap();
+        ms.set_parity(serialport::Parity::None).unwrap();
+        ms.set_stop_bits(serialport::StopBits::One).unwrap();
+        ms.set_timeout(std::time::Duration::new(1, 0)).unwrap();
+        ms.write_request_to_send(false).unwrap();
+        ms.write_data_terminal_ready(false).unwrap();
+        ms.read_clear_to_send().unwrap();
+        ms.read_data_set_ready().unwrap();
+        ms.read_ring_indicator().unwrap();
+        ms.read_carrier_detect().unwrap();
+        ms.bytes_to_read().unwrap();
+        ms.bytes_to_write().unwrap();
+        ms.clear(serialport::ClearBuffer::All).unwrap();
+        ms.try_clone().unwrap();
+        ms.set_break().unwrap();
+        ms.clear_break().unwrap();
+    }
+
+    #[test]
+    fn write() {
+        use std::io::Write;
+
+        let mut ms = MockSerial::default();
+        write!(ms, "hello").unwrap();
+        ms.flush().unwrap();
+    }
+
+    #[test]
+    fn read() {
+        use std::io::Read;
+
+        let mut ms = MockSerial::default();
+        let mut buf: [u8; 8] = [0; 8];
+        ms.read(&mut buf).unwrap();
+    }
+
+    #[test]
+    fn read_write() {
+        use std::io::{Read, Write};
+
+        let mut ms = MockSerial::default();
+        let mut buf: [u8; 4] = [0; 4];
+
+        write!(ms, "test").unwrap();
+        write!(ms, "t3st").unwrap();
+
+        ms.read(&mut buf).unwrap();
+        assert_eq!(buf, "test".as_bytes());
+        ms.read(&mut buf).unwrap();
+        assert_eq!(buf, "t3st".as_bytes());
     }
 }

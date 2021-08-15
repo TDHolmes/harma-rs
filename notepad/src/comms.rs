@@ -122,13 +122,13 @@ mod comm_test {
 
     #[test]
     fn create_pensel_serial() {
-        let port = Box::new(MockSerial {});
+        let port = Box::new(MockSerial::default());
         let _ = PenselSerial::new(port);
     }
 
     #[test]
     fn parse_accel() {
-        let port = Box::new(MockSerial {});
+        let port = Box::new(MockSerial::default());
         let comm = PenselSerial::new(port);
 
         let line = "A:1,2,3\n";
@@ -145,7 +145,7 @@ mod comm_test {
 
     #[test]
     fn parse_grav() {
-        let port = Box::new(MockSerial {});
+        let port = Box::new(MockSerial::default());
         let comm = PenselSerial::new(port);
 
         let line = "O:1,2,3\n";
