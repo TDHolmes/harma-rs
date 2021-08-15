@@ -61,7 +61,7 @@ It contains multiple paragraphs and should be preceeded by the parameter list.
     exit: Some(exit_root),
 };
 
-fn select_foo<'a, const N: usize>(
+fn select_foo<const N: usize>(
     _menu: &Menu<CliOutput<N>>,
     _item: &Item<CliOutput<N>>,
     args: &[&str],

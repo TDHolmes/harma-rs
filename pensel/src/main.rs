@@ -3,7 +3,7 @@
 
 use pensel::{bsp, hal, pac, serial_write, usb_serial::UsbSerial};
 
-use cortex_m::{asm::wfi, peripheral::NVIC};
+use cortex_m::peripheral::NVIC;
 use panic_halt as _;
 
 use bsp::entry;
@@ -27,7 +27,7 @@ fn main() -> ! {
 
     // initialize GPIOs
     let pins = bsp::Pins::new(peripherals.PORT);
-    let mut red_led: bsp::RedLed = pins.d13.into();
+    let mut _red_led: bsp::RedLed = pins.d13.into();
     let i2c = bsp::i2c_master(
         &mut clocks,
         400.khz(),
@@ -105,9 +105,9 @@ fn handle_bno_err(error: &bno055::Error<hal::sercom::v1::I2CError>, delay: &mut 
 fn USB() {
     let mut buf = [0u8; 64];
     unsafe {
-        USB_SERIAL.as_mut().map(|serial| {
+        if let Some(serial) = USB_SERIAL.as_mut() {
             let bytes_read = serial.poll(&mut buf);
             serial.write(&buf[0..bytes_read]);
-        });
+        }
     }
 }

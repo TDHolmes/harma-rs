@@ -61,10 +61,7 @@ impl<'a> UsbSerial<'a> {
     /// # Returns
     /// Number of bytes successfully written
     pub fn write(&mut self, bytes: &[u8]) -> usize {
-        match self.usb_serial.write(bytes) {
-            Ok(count) => count,
-            Err(_) => 0,
-        }
+        self.usb_serial.write(bytes).unwrap_or(0)
     }
 
     /// Writes a message over USB serial
@@ -76,10 +73,7 @@ impl<'a> UsbSerial<'a> {
     /// number of bytes successfully written
     pub fn write_str(&mut self, message: &str) -> usize {
         let message_bytes = message.as_bytes();
-        match self.usb_serial.write(message_bytes) {
-            Ok(count) => count,
-            Err(_) => 0,
-        }
+        self.usb_serial.write(message_bytes).unwrap_or(0)
     }
 }
 
