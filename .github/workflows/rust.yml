@@ -1,3 +1,4 @@
+
 name: Rust
 
 on:
@@ -29,7 +30,6 @@ jobs:
       run: |
         cd pensel
         cargo build
-        cargo clippy
     - name: Build notepad
       run: |
         sudo apt-get clean && sudo apt-get update
@@ -37,4 +37,13 @@ jobs:
         cd notepad
         cargo build --examples
         cargo test
-        cargo clippy
+    - name: notepad clippy
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path ./notepad/Cargo.toml
+    - name: pensel clippy
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path ./pensel/Cargo.toml
