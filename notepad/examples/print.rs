@@ -1,5 +1,5 @@
 //! Example that just prints all packets
-use heapless::spsc::{Consumer, Producer, Queue};
+use heapless::spsc::Queue;
 use std::{sync::atomic::AtomicBool, thread};
 
 use notepad::{
