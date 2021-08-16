@@ -13,3 +13,17 @@ pub enum ParsedLine {
     Grav(GravityVec),
     Accel(AccelerationVec),
 }
+
+#[cfg(test)]
+mod test_types {
+    use super::*;
+
+    #[test]
+    fn partial_eq_parsed_line() {
+        let mut test_line = ParsedLine::None;
+
+        assert_eq!(test_line, ParsedLine::None);
+        test_line = ParsedLine::Accel(AccelerationVec { x: 1, y: 2, z: 3 });
+        assert_ne!(test_line, ParsedLine::None);
+    }
+}
