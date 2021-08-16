@@ -116,7 +116,7 @@ impl PenselSerial {
             read_index = 0;
 
             // check if we've been requested to halt
-            if should_run.as_ref().load(Ordering::Acquire) == false {
+            if !should_run.as_ref().load(Ordering::Acquire) {
                 break;
             }
         }
