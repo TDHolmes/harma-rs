@@ -1,7 +1,10 @@
 //! Takes care of all of the serial communication & parsing with Pensel
 use heapless::spsc::Producer;
 use regex::Regex;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 use crate::types;
 
@@ -73,13 +76,13 @@ impl PenselSerial {
         &mut self,
         mut accel_queue: Producer<types::AccelerationVec, 4>,
         mut grav_queue: Producer<types::AccelerationVec, 4>,
-        should_run: &AtomicBool,
+        should_run: Arc<AtomicBool>,
     ) {
         let mut serial_read_buf: [u8; 128] = [0; 128];
         let mut write_index: usize = 0;
         let mut read_index: usize = 0;
 
-        while should_run.load(Ordering::Acquire) {
+        loop {
             // read out some bytes and try to parse it, line by line
             let bytes_read = self.read_raw(&mut serial_read_buf[write_index..]);
             write_index += bytes_read;
@@ -111,6 +114,11 @@ impl PenselSerial {
                 serial_read_buf.copy_within(unread_range, 0);
             }
             read_index = 0;
+
+            // check if we've been requested to halt
+            if should_run.as_ref().load(Ordering::Acquire) == false {
+                break;
+            }
         }
     }
 }
@@ -119,6 +127,13 @@ impl PenselSerial {
 mod comm_test {
     use super::*;
     use crate::mock_serial::MockSerial;
+    use heapless::spsc::Queue;
+
+    static mut A_QUEUE: Queue<types::AccelerationVec, 4> = Queue::new();
+    static mut G_QUEUE: Queue<types::GravityVec, 4> = Queue::new();
+
+    const EXAMPLE_ACCEL_LINE: &str = "A:1,2,3\n";
+    const EXAMPLE_GRAVITY_LINE: &str = "O:1,2,3\n";
 
     #[test]
     fn create_pensel_serial() {
@@ -131,11 +146,13 @@ mod comm_test {
         let port = Box::new(MockSerial::default());
         let comm = PenselSerial::new(port);
 
-        let line = "A:1,2,3\n";
-        let res = comm.parse_line(line);
+        let res = comm.parse_line(EXAMPLE_ACCEL_LINE);
         let accel_pkt = match res {
             types::ParsedLine::Accel(g) => g,
-            _ => panic!("Line {} parsed incorrectly to {:#?}", line, res),
+            _ => panic!(
+                "Line {} parsed incorrectly to {:#?}",
+                EXAMPLE_ACCEL_LINE, res
+            ),
         };
 
         assert_eq!(accel_pkt.x, 1);
@@ -148,15 +165,68 @@ mod comm_test {
         let port = Box::new(MockSerial::default());
         let comm = PenselSerial::new(port);
 
-        let line = "O:1,2,3\n";
-        let res = comm.parse_line(line);
+        let res = comm.parse_line(EXAMPLE_GRAVITY_LINE);
         let grav_pkt = match res {
             types::ParsedLine::Grav(g) => g,
-            _ => panic!("Line '{}' parsed incorrectly to {:#?}", line, res),
+            _ => panic!(
+                "Line '{}' parsed incorrectly to {:#?}",
+                EXAMPLE_GRAVITY_LINE, res
+            ),
         };
 
         assert_eq!(grav_pkt.x, 1);
         assert_eq!(grav_pkt.y, 2);
         assert_eq!(grav_pkt.z, 3);
+    }
+
+    #[test]
+    fn parse_garbage() {
+        let port = Box::new(MockSerial::default());
+        let comm = PenselSerial::new(port);
+
+        let garbage_line = "derpy derp\n";
+        let res = comm.parse_line(garbage_line);
+        match res {
+            types::ParsedLine::None => (),
+            _ => panic!("Line '{}' parsed incorrectly to {:#?}", garbage_line, res),
+        }
+    }
+
+    #[test]
+    fn parse_until_basic() {
+        use std::io::Write;
+
+        let should_run = Arc::new(AtomicBool::new(true));
+        let should_run_thread_ref = should_run.clone();
+
+        let mut port = Box::new(MockSerial::default());
+
+        // prime the pipes with some lovely data
+        port.write(EXAMPLE_ACCEL_LINE.as_bytes()).unwrap();
+        port.write(EXAMPLE_GRAVITY_LINE.as_bytes()).unwrap();
+
+        let mut serial = PenselSerial::new(port);
+
+        let (a_producer, mut a_consumer) = unsafe { A_QUEUE.split() };
+        let (g_producer, mut g_consumer) = unsafe { G_QUEUE.split() };
+
+        let sender = std::thread::spawn(move || {
+            serial.parse_data_until(a_producer, g_producer, should_run_thread_ref)
+        });
+
+        let (mut accel_received, mut gravity_recevied) = (false, false);
+        while !accel_received || !gravity_recevied {
+            if let Some(a) = a_consumer.dequeue() {
+                println!("A: {:?}", a);
+                accel_received = true;
+            }
+            if let Some(g) = g_consumer.dequeue() {
+                println!("G: {:?}", g);
+                gravity_recevied = true;
+            }
+        }
+
+        should_run.store(false, std::sync::atomic::Ordering::Release);
+        sender.join().unwrap();
     }
 }
