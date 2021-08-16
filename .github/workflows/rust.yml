@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  pensel CI:
+  pensel:
 
     runs-on: ubuntu-latest
 
@@ -36,7 +36,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --manifest-path ./pensel/Cargo.toml --target thumbv6m-none-eabi
 
-  notepad CI:
+  notepad:
 
     runs-on: ubuntu-latest
 
