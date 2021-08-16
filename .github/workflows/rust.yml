@@ -11,7 +11,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  pensel:
+  build:
 
     runs-on: ubuntu-latest
 
@@ -30,26 +30,6 @@ jobs:
       run: |
         cd pensel
         cargo build
-    - name: pensel clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --manifest-path ./pensel/Cargo.toml --target thumbv6m-none-eabi
-
-  notepad:
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-        components: clippy
-    - name: Checkout Sources
-      uses: actions/checkout@v2
     - name: Build notepad
       run: |
         sudo apt-get clean && sudo apt-get update
@@ -62,3 +42,10 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --manifest-path ./notepad/Cargo.toml
+        name: Notepad Clippy
+    - name: pensel clippy
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --manifest-path ./pensel/Cargo.toml --target thumbv6m-none-eabi
+        name: Pensel Clippy
