@@ -74,8 +74,8 @@ impl PenselSerial {
 
     pub fn parse_data_until(
         &mut self,
-        mut accel_queue: Producer<types::AccelerationVec, 4>,
-        mut grav_queue: Producer<types::AccelerationVec, 4>,
+        mut accel_queue: Producer<types::AccelerationVec, { types::ACC_QUEUE_SIZE }>,
+        mut grav_queue: Producer<types::AccelerationVec, { types::GRAV_QUEUE_SIZE }>,
         should_run: Arc<AtomicBool>,
     ) {
         let mut serial_read_buf: [u8; 128] = [0; 128];
@@ -92,12 +92,8 @@ impl PenselSerial {
                 let mut parsed = true;
                 let parsed_line = self.parse_line(line);
                 match parsed_line {
-                    types::ParsedLine::Accel(acc) => accel_queue
-                        .enqueue(acc)
-                        .unwrap_or_else(|_| eprintln!("buf full")),
-                    types::ParsedLine::Grav(grav) => grav_queue
-                        .enqueue(grav)
-                        .unwrap_or_else(|_| eprintln!("buf full")),
+                    types::ParsedLine::Accel(acc) => accel_queue.enqueue(acc).unwrap_or(()),
+                    types::ParsedLine::Grav(grav) => grav_queue.enqueue(grav).unwrap_or(()),
                     types::ParsedLine::None => parsed = false,
                 };
                 if parsed {

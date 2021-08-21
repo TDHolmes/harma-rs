@@ -10,11 +10,11 @@ use std::{
 
 use notepad::{
     comms,
-    types::{AccelerationVec, GravityVec},
+    types::{self, AccelerationVec, GravityVec},
 };
 
-static mut A_QUEUE: Queue<AccelerationVec, 4> = Queue::new();
-static mut G_QUEUE: Queue<GravityVec, 4> = Queue::new();
+static mut A_QUEUE: Queue<AccelerationVec, { types::ACC_QUEUE_SIZE }> = Queue::new();
+static mut G_QUEUE: Queue<GravityVec, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
 fn main() {
     let should_run = Arc::new(AtomicBool::new(true));
@@ -28,7 +28,7 @@ fn main() {
         serial.parse_data_until(a_producer, g_producer, should_run_thread_ref)
     });
 
-    should_run.as_ref().store(false, Ordering::Acquire);
+    should_run.as_ref().store(true, Ordering::Release);
 
     loop {
         if let Some(a) = a_consumer.dequeue() {

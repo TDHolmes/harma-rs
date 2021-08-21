@@ -14,6 +14,9 @@ pub enum ParsedLine {
     Accel(AccelerationVec),
 }
 
+pub const ACC_QUEUE_SIZE: usize = 100;
+pub const GRAV_QUEUE_SIZE: usize = 100;
+
 #[cfg(test)]
 mod test_types {
     use super::*;
