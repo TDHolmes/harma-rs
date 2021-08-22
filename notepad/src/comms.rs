@@ -125,8 +125,8 @@ mod comm_test {
     use crate::mock_serial::MockSerial;
     use heapless::spsc::Queue;
 
-    static mut A_QUEUE: Queue<types::AccelerationVec, 4> = Queue::new();
-    static mut G_QUEUE: Queue<types::GravityVec, 4> = Queue::new();
+    static mut A_QUEUE: Queue<types::AccelerationVec, types::ACC_QUEUE_SIZE> = Queue::new();
+    static mut G_QUEUE: Queue<types::GravityVec, types::GRAV_QUEUE_SIZE> = Queue::new();
 
     const EXAMPLE_ACCEL_LINE: &str = "A:1,2,3\n";
     const EXAMPLE_GRAVITY_LINE: &str = "O:1,2,3\n";
