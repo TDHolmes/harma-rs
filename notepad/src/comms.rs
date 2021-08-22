@@ -18,7 +18,7 @@ impl PenselSerial {
     /// Creates a new instance of PenselSerial from the provided serial port trait object
     pub fn new(port: Box<dyn serialport::SerialPort>) -> PenselSerial {
         let re_accel = Regex::new(r"A:([-\d]+),([-\d]+),([-\d]+)").unwrap();
-        let re_gravity = Regex::new(r"O:([-\d]+),([-\d]+),([-\d]+)").unwrap();
+        let re_gravity = Regex::new(r"G:([-\d]+),([-\d]+),([-\d]+)").unwrap();
         PenselSerial {
             port,
             re_accel,

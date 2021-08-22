@@ -19,6 +19,10 @@ use notepad::{
 static mut A_QUEUE: Queue<AccelerationVec, { types::ACC_QUEUE_SIZE }> = Queue::new();
 static mut G_QUEUE: Queue<GravityVec, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
+const PURPLE: RGB8 = RGB8::new(0xE0, 0x80, 0xFF);
+const RED: RGB8 = RGB8::new(0xFF, 0x00, 0x00);
+const GREEN: RGB8 = RGB8::new(0x00, 0xFF, 0x00);
+
 const PRINT_LEN: usize = 1000;
 
 fn main() {
@@ -36,11 +40,14 @@ fn main() {
 
     should_run.as_ref().store(true, Ordering::Release);
 
-    let mut x_points: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
-    let mut y_points: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
-    let mut z_points: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
+    let mut acc_x: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
+    let mut acc_y: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
+    let mut acc_z: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
 
-    println!("\ny = interpolated points");
+    let mut grav_x: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
+    let mut grav_y: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
+    let mut grav_z: [(f32, f32); PRINT_LEN] = [(0., 0.); PRINT_LEN];
+
     let term = Term::stdout();
     term.hide_cursor().unwrap();
 
@@ -52,30 +59,55 @@ fn main() {
     .unwrap();
 
     // let mut skip = 0;
+    let mut g_update = false;
+    let mut a_update = false;
     loop {
-        if let Some(_a) = a_consumer.dequeue() {
-            // println!("A: {:?}", a);
+        if let Some(a) = a_consumer.dequeue() {
+            acc_x.copy_within(1..PRINT_LEN, 0);
+            acc_y.copy_within(1..PRINT_LEN, 0);
+            acc_z.copy_within(1..PRINT_LEN, 0);
+            acc_x[PRINT_LEN - 1] = (0., a.x as f32);
+            acc_y[PRINT_LEN - 1] = (0., a.y as f32);
+            acc_z[PRINT_LEN - 1] = (0., a.z as f32);
+            for index in 0..PRINT_LEN {
+                acc_x[index].0 += 1.;
+                acc_y[index].0 += 1.;
+                acc_z[index].0 += 1.;
+            }
+            a_update = true;
         }
         if let Some(g) = g_consumer.dequeue() {
-            x_points.copy_within(0..PRINT_LEN - 1, 1);
-            x_points[0] = (0., g.x as f32);
-            y_points.copy_within(0..PRINT_LEN - 1, 1);
-            y_points[0] = (0., g.y as f32);
-            z_points.copy_within(0..PRINT_LEN - 1, 1);
-            z_points[0] = (0., g.z as f32);
+            grav_x.copy_within(1..PRINT_LEN, 0);
+            grav_y.copy_within(1..PRINT_LEN, 0);
+            grav_z.copy_within(1..PRINT_LEN, 0);
+            grav_x[PRINT_LEN - 1] = (0., g.x as f32);
+            grav_y[PRINT_LEN - 1] = (0., g.y as f32);
+            grav_z[PRINT_LEN - 1] = (0., g.z as f32);
             for index in 0..PRINT_LEN {
-                x_points[index].0 += 1.;
-                y_points[index].0 += 1.;
-                z_points[index].0 += 1.;
+                grav_x[index].0 += 1.;
+                grav_y[index].0 += 1.;
+                grav_z[index].0 += 1.;
             }
+            g_update = true;
+        }
+
+        if g_update && a_update {
+            a_update = false;
+            g_update = false;
 
             term.move_cursor_to(0, 0).unwrap();
+            println!("Gravity Vector");
             Chart::new(200, 100, 0., 1000.)
-                .linecolorplot(&Shape::Lines(&x_points), RGB8::new(0xff, 0x00, 0x00))
-                .linecolorplot(&Shape::Lines(&y_points), RGB8::new(0x00, 0xff, 0x00))
-                .linecolorplot(&Shape::Lines(&z_points), RGB8::new(0x00, 0x00, 0xff))
+                .linecolorplot(&Shape::Lines(&grav_x), RED)
+                .linecolorplot(&Shape::Lines(&grav_y), GREEN)
+                .linecolorplot(&Shape::Lines(&grav_z), PURPLE)
                 .display();
-            // println!("{:#?}", &points);
+            println!("\nLinear Acceleration");
+            Chart::new(200, 100, 0., 1000.)
+                .linecolorplot(&Shape::Lines(&acc_x), RED)
+                .linecolorplot(&Shape::Lines(&acc_y), GREEN)
+                .linecolorplot(&Shape::Lines(&acc_z), PURPLE)
+                .display();
         }
 
         if should_run.as_ref().load(Ordering::Acquire) == false {
