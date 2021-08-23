@@ -15,8 +15,6 @@ panic-halt = "0.2"
 usb-device = "0.2"
 usbd-serial = "0.1"
 heapless = "0.7"
-ufmt = "0.1"
-ufmt-utils = "0.1"
 menu = "0.3"
 bno055 = "0.3"
 

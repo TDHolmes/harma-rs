@@ -94,11 +94,10 @@ impl<'a> UsbSerial<'a> {
 #[macro_export]
 macro_rules! serial_write {
     ($usbserial:ident, $($tt:tt)+) => {{
+        use core::fmt::Write;
+
         let mut s: heapless::String<64> = heapless::String::new();
-        ufmt::uwrite!(
-            ufmt_utils::WriteAdapter(&mut s), $($tt)*
-        )
-        .unwrap();
+        core::write!(&mut s, $($tt)*).unwrap();
         cortex_m::interrupt::free(|_| {
             unsafe {
                 $usbserial.as_mut().unwrap().write_str(s.as_str());
