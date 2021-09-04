@@ -129,7 +129,7 @@ mod comm_test {
     static mut G_QUEUE: Queue<types::GravityVec, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
     const EXAMPLE_ACCEL_LINE: &str = "A:1,2,3\n";
-    const EXAMPLE_GRAVITY_LINE: &str = "O:1,2,3\n";
+    const EXAMPLE_GRAVITY_LINE: &str = "G:1,2,3\n";
 
     #[test]
     fn create_pensel_serial() {
