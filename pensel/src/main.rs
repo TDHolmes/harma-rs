@@ -4,7 +4,7 @@
 use pensel::{bsp, hal, pac, serial_write, usb_serial::UsbSerial};
 
 use cortex_m::peripheral::NVIC;
-use panic_halt as _;
+use panic_persist as _;
 
 use bsp::entry;
 use hal::{clock::GenericClockController, delay::Delay, prelude::*};
@@ -80,6 +80,13 @@ fn main() -> ! {
         cortex_m::asm::wfi();
     }
 
+    // Check if there was a panic message, if so, send to UART
+    if let Some(msg) = panic_persist::get_panic_message_bytes() {
+        unsafe {
+            USB_SERIAL.as_mut().unwrap().write(msg);
+        }
+    }
+
     // initialize the IMU
     let mut imu = bno055::Bno055::new(i2c).with_alternative_address();
     if let Err(err) = imu.init(&mut delay) {
@@ -94,26 +101,26 @@ fn main() -> ! {
     // perpetually read out angle data
     loop {
         // Get gravity vector
-        let angles_res = imu.gravity();
+        let angles_res = imu.gravity_fixed();
         if let Ok(angles) = angles_res {
             serial_write!(
                 USB_SERIAL,
                 "G:{},{},{}\n",
-                (angles.x * 1000.) as isize,
-                (angles.y * 1000.) as isize,
-                (angles.z * 1000.) as isize
+                (angles.x as isize * 10),
+                (angles.y as isize * 10),
+                (angles.z as isize * 10)
             );
         }
 
         // get acceleration
-        let lin_accel = imu.linear_acceleration();
+        let lin_accel = imu.linear_acceleration_fixed();
         if let Ok(acc) = lin_accel {
             serial_write!(
                 USB_SERIAL,
                 "A:{},{},{}\n",
-                (acc.x * 1000.) as isize,
-                (acc.y * 1000.) as isize,
-                (acc.z * 1000.) as isize
+                (acc.x as isize * 10),
+                (acc.y as isize * 10),
+                (acc.z as isize * 10)
             );
         }
     }
