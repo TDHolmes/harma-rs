@@ -15,7 +15,7 @@ mint = "0.5"
 heapless = "0.7"
 
 [dev-dependencies]
-textplots = "0.7"
+textplots = "0.8"
 rgb = "0.8"
 console = "0.14"
 ctrlc = "3"
