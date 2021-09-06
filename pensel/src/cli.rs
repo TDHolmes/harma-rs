@@ -1,22 +1,26 @@
-use core::fmt::Write;
-use menu::{Item, ItemType, Menu, Parameter};
+//! Manages the command line interface. Uses `menu` under the hood.
+use heapless::spsc::Producer;
+use menu::{Item, ItemType, Menu};
 
-pub const CLI_QUEUE_SIZE: usize = 512;
+pub const CLI_QUEUE_SIZE: usize = 256;
 
-pub struct CliOutput<const N: usize> {
-    write_queue: heapless::spsc::Producer<'static, u8, N>,
+static mut MENU_BUFFER: [u8; CLI_QUEUE_SIZE] = [0; CLI_QUEUE_SIZE];
+
+struct CliOutput<'a, const N: usize> {
+    /// Bytes coming from our CLI to be output to the serial port
+    cli_output_queue: Producer<'a, u8, N>,
 }
 
-impl<const N: usize> CliOutput<{ N }> {
-    pub fn new(write_queue: heapless::spsc::Producer<'static, u8, N>) -> CliOutput<N> {
-        CliOutput { write_queue }
+impl<'a, const N: usize> CliOutput<'a, { N }> {
+    fn new(cli_output_queue: Producer<'a, u8, N>) -> CliOutput<'a, N> {
+        CliOutput { cli_output_queue }
     }
 }
 
-impl<const N: usize> core::fmt::Write for CliOutput<{ N }> {
+impl<'a, const N: usize> core::fmt::Write for CliOutput<'a, { N }> {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
         for byte in s.bytes() {
-            if self.write_queue.enqueue(byte).is_err() {
+            if self.cli_output_queue.enqueue(byte).is_err() {
                 return Err(core::fmt::Error);
             }
         }
@@ -24,56 +28,58 @@ impl<const N: usize> core::fmt::Write for CliOutput<{ N }> {
     }
 }
 
-pub const ROOT_MENU: Menu<CliOutput<CLI_QUEUE_SIZE>> = Menu {
+/// Our encapsulation of the CLI
+pub struct Cli<'a, const N: usize> {
+    /// the CLI runner
+    runner: menu::Runner<'a, CliOutput<'a, N>>,
+}
+
+impl<'a> Cli<'a, CLI_QUEUE_SIZE> {
+    /// Creates our Cli encapsulation
+    ///
+    /// # Parameters
+    /// `cli_output_queue`: where we write our bytes to be sent to the serial port by the application
+    pub fn new(
+        cli_output_queue: Producer<'static, u8, CLI_QUEUE_SIZE>,
+    ) -> Cli<'static, CLI_QUEUE_SIZE> {
+        let buffer = unsafe { &mut MENU_BUFFER };
+        let runner = menu::Runner::new(&ROOT_MENU, buffer, CliOutput::new(cli_output_queue));
+
+        Cli { runner }
+    }
+
+    /// Give a byte coming from our serial connection to our CLI runner
+    pub fn input_from_serial(&mut self, byte: u8) {
+        self.runner.input_byte(byte);
+    }
+
+    /// Give the bytes coming from our serial connection to our CLI runner
+    pub fn input_from_serial_bytes(&mut self, bytes: &[u8]) {
+        for b in bytes {
+            self.input_from_serial(*b)
+        }
+    }
+}
+
+const ROOT_MENU: Menu<CliOutput<CLI_QUEUE_SIZE>> = Menu {
     label: "root",
     items: &[&Item {
         item_type: ItemType::Callback {
-            function: select_foo,
-            parameters: &[
-                Parameter::Mandatory {
-                    parameter_name: "a",
-                    help: Some("This is the help text for 'a'"),
-                },
-                Parameter::Optional {
-                    parameter_name: "b",
-                    help: None,
-                },
-                Parameter::Named {
-                    parameter_name: "verbose",
-                    help: None,
-                },
-                Parameter::NamedValue {
-                    parameter_name: "level",
-                    argument_name: "INT",
-                    help: Some("Set the level of the dangle"),
-                },
-            ],
+            function: panic,
+            parameters: &[],
         },
-        command: "foo",
-        help: Some(
-            "Makes a foo appear.
-This is some extensive help text.
-It contains multiple paragraphs and should be preceeded by the parameter list.
-",
-        ),
+        command: "panic",
+        help: Some("Tests our panic handling by forcing one to happen"),
     }],
-    entry: Some(enter_root),
-    exit: Some(exit_root),
+    entry: None,
+    exit: None,
 };
 
-fn select_foo<const N: usize>(
+fn panic<const N: usize>(
     _menu: &Menu<CliOutput<N>>,
     _item: &Item<CliOutput<N>>,
-    args: &[&str],
-    context: &mut CliOutput<N>,
+    _args: &[&str],
+    _context: &mut CliOutput<N>,
 ) {
-    writeln!(context, "In select_bar. Args = {:?}", args).unwrap();
-}
-
-fn enter_root<const N: usize>(_menu: &Menu<CliOutput<N>>, context: &mut CliOutput<N>) {
-    writeln!(context, "In enter_root").unwrap();
-}
-
-fn exit_root<const N: usize>(_menu: &Menu<CliOutput<N>>, context: &mut CliOutput<N>) {
-    writeln!(context, "In exit_root").unwrap();
+    panic!("test panic");
 }

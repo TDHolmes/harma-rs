@@ -1,27 +1,42 @@
-//! helper structure for working with USB serial communication
-use crate::prelude::*;
+//! Manager of all USB serial communication
+use crate::{cli, prelude::*};
+use hal::{clock::GenericClockController, usb::UsbBus};
+use pac::interrupt;
 
+use core::sync::atomic;
+
+use cortex_m::peripheral::NVIC;
+use heapless::spsc::{Consumer, Producer, Queue};
 use usb_device::{class_prelude::UsbBusAllocator, prelude::*};
 use usbd_serial::{SerialPort, USB_CLASS_CDC};
-
-use hal::{clock::GenericClockController, usb::UsbBus};
 
 pub struct UsbSerial<'a> {
     usb_serial: SerialPort<'a, UsbBus>,
     usb_dev: UsbDevice<'a, UsbBus>,
 }
 
+/// static global for `USB_SERIAL` to use under the hood. Needs to be a static as far as I can tell.
+/// not directly used by our code.
 static mut USB_ALLOCATOR: Option<UsbBusAllocator<UsbBus>> = None;
+/// Our global singleton for USB serial communication. Accessed via `usb_serial::get`
+static mut USB_SERIAL: Option<UsbSerial> = None;
+/// The queue for receiving bytes from the serial port
+static mut CLI_INPUT_QUEUE: Queue<u8, { cli::CLI_QUEUE_SIZE }> = Queue::new();
+/// The producer end of `CLI_INPUT_QUEUE`. Bytes are put into the queue in the interrupt handler `USB`
+static mut CLI_INPUT_PRODUCER: Option<Producer<u8, { cli::CLI_QUEUE_SIZE }>> = None;
+/// Once we see our first user interaction, we set this to true
+static USER_PRESENT: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 impl<'a> UsbSerial<'a> {
     /// Initializes everything we need for USB serial communication
-    pub fn new(
+    fn init(
         usb: pac::USB,
         clocks: &mut GenericClockController,
+        nvic: &mut NVIC,
         pm: &mut pac::PM,
         dm: impl Into<bsp::UsbDm>,
         dp: impl Into<bsp::UsbDp>,
-    ) -> UsbSerial<'a> {
+    ) {
         let usb_allocator = unsafe {
             USB_ALLOCATOR = Some(bsp::usb_allocator(usb, clocks, pm, dm, dp));
             USB_ALLOCATOR.as_ref().unwrap()
@@ -33,9 +48,17 @@ impl<'a> UsbSerial<'a> {
             .serial_number("PENSEL")
             .device_class(USB_CLASS_CDC)
             .build();
-        UsbSerial {
-            usb_serial,
-            usb_dev,
+
+        // Safety:
+        // initializes a global static which is only accessed in interrupt handler `USB`, which isn't enabled
+        // until after this is completed.
+        unsafe {
+            USB_SERIAL = Some(UsbSerial {
+                usb_serial,
+                usb_dev,
+            });
+            nvic.set_priority(interrupt::USB, 1);
+            NVIC::unmask(interrupt::USB);
         }
     }
 
@@ -77,10 +100,68 @@ impl<'a> UsbSerial<'a> {
     }
 }
 
+/// Initializes our global singleton
+pub fn init(
+    usb: pac::USB,
+    nvic: &mut NVIC,
+    clocks: &mut GenericClockController,
+    pm: &mut pac::PM,
+    dm: impl Into<bsp::UsbDm>,
+    dp: impl Into<bsp::UsbDp>,
+) {
+    UsbSerial::init(usb, clocks, nvic, pm, dm, dp);
+}
+
+/// Checks if a user is present at the serial port by checking if we've received any
+/// bytes since boot
+pub fn user_present() -> bool {
+    USER_PRESENT.load(atomic::Ordering::Acquire)
+}
+
+/// Gets the consumer end of the `heapless::spsc` queue for consuming bytes coming from
+/// the serial port.
+pub fn get_serial_input_pipe() -> Consumer<'static, u8, { cli::CLI_QUEUE_SIZE }> {
+    // Safety: Guaranteed to only do this once due to the check for `CLI_INPUT_PRODUCER`
+    // being non-None & we disable interrupts while we do this check, since the interrupt
+    // handler `USB` interacts with `CLI_INPUT_PRODUCER`.
+    cortex_m::interrupt::free(|_| unsafe {
+        if CLI_INPUT_PRODUCER.is_some() {
+            panic!("cannot call get_serial_input_pipe more than once");
+        }
+
+        let (producer, consumer) = CLI_INPUT_QUEUE.split();
+        CLI_INPUT_PRODUCER = Some(producer);
+
+        consumer
+    })
+}
+
+/// Borrows the global singleton `UsbSerial` for a brief period with interrupts disabled
+///
+/// # Arguments
+/// `borrower`: The closure that gets run borrowing the global `UsbSerial`
+///
+/// # Safety
+/// the global singleton `UsbSerial` can be safely borrowed because we disable
+/// interrupts while it is being borrowed, guaranteeing that interrupt handlers like
+/// `USB` cannot mutate `UsbSerial` while we are as well.
+///
+/// # Panic
+/// If `init` has not been called and we haven't initialized our global singleton `UsbSerial`,
+/// we will panic.
+pub fn get<T, R>(borrower: T) -> R
+where
+    T: Fn(&mut UsbSerial) -> R,
+{
+    cortex_m::interrupt::free(|_| unsafe {
+        let mut usb_serial = USB_SERIAL.as_mut().expect("UsbSerial not initialized");
+        borrower(&mut usb_serial)
+    })
+}
+
 /// Writes the given message out over USB serial.
 ///
 /// # Arguments
-/// * usbserial: The `static mut Option<UsbSerial>`
 /// * println args: variable arguments passed along to `ufmt::uwrite!`
 ///
 /// # Warning
@@ -93,15 +174,45 @@ impl<'a> UsbSerial<'a> {
 /// we have sole access
 #[macro_export]
 macro_rules! serial_write {
-    ($usbserial:ident, $($tt:tt)+) => {{
+    ($($tt:tt)+) => {{
         use core::fmt::Write;
 
         let mut s: heapless::String<64> = heapless::String::new();
         core::write!(&mut s, $($tt)*).unwrap();
-        cortex_m::interrupt::free(|_| {
-            unsafe {
-                $usbserial.as_mut().unwrap().write_str(s.as_str());
-            }
-        });
+        crate::usb_serial::get(|usbserial| { usbserial.write_str(s.as_str()); });
     }};
+}
+
+#[interrupt]
+#[allow(non_snake_case)]
+fn USB() {
+    let mut buf = [0u8; 64];
+    // Safety:
+    // `USB_SERIAL`:
+    // Only interrupt handler that accesses it. thread access is only done
+    // while interrupts are disabled.
+    //
+    // `CLI_INPUT_PRODUCER`:
+    // This is the only spot that we mutate it. When we initialize it to `Some()`,
+    // interrupts are disabled so this handler cannot run.
+    unsafe {
+        if let Some(serial) = USB_SERIAL.as_mut() {
+            let bytes_read = serial.poll(&mut buf);
+            // serial.write(&buf[0..bytes_read]);
+            if bytes_read != 0 {
+                USER_PRESENT.store(true, atomic::Ordering::Release);
+
+                // Enqueue bytes that have been read
+                if CLI_INPUT_PRODUCER.is_some() {
+                    for b in &buf[0..bytes_read] {
+                        CLI_INPUT_PRODUCER
+                            .as_mut()
+                            .unwrap()
+                            .enqueue(*b)
+                            .expect("serial input queue full");
+                    }
+                }
+            }
+        }
+    }
 }

@@ -1,17 +1,14 @@
 #![no_std]
 #![no_main]
 
-use pensel::{bsp, hal, pac, serial_write, usb_serial::UsbSerial};
+use pensel::{bsp, cli, hal, pac, serial_write, usb_serial};
 
-use cortex_m::peripheral::NVIC;
+use heapless::spsc::Queue;
 use panic_persist as _;
 
 use bsp::entry;
 use hal::{clock::GenericClockController, delay::Delay, prelude::*};
-use pac::{interrupt, CorePeripherals, Peripherals};
-
-static mut USB_SERIAL: Option<UsbSerial> = None;
-static SHOULD_START: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(true);
+use pac::{CorePeripherals, Peripherals};
 
 const BNO055_CALIBRATION: bno055::BNO055Calibration = bno055::BNO055Calibration {
     acc_offset_x_lsb: 2,
@@ -37,6 +34,9 @@ const BNO055_CALIBRATION: bno055::BNO055Calibration = bno055::BNO055Calibration 
     mag_radius_lsb: 241,
     mag_radius_msb: 2,
 };
+
+/// Derp
+static mut CLI_OUTPUT_QUEUE: Queue<u8, { cli::CLI_QUEUE_SIZE }> = Queue::new();
 
 #[entry]
 fn main() -> ! {
@@ -64,26 +64,34 @@ fn main() -> ! {
     );
 
     // initialize USB
-    unsafe {
-        USB_SERIAL = Some(UsbSerial::new(
-            peripherals.USB,
-            &mut clocks,
-            &mut peripherals.PM,
-            pins.usb_dm,
-            pins.usb_dp,
-        ));
-        core.NVIC.set_priority(interrupt::USB, 1);
-        NVIC::unmask(interrupt::USB);
-    }
+    usb_serial::init(
+        peripherals.USB,
+        &mut core.NVIC,
+        &mut clocks,
+        &mut peripherals.PM,
+        pins.usb_dm,
+        pins.usb_dp,
+    );
 
-    while SHOULD_START.load(core::sync::atomic::Ordering::Acquire) == false {
+    // Wait for us to have the terminal open
+    while !usb_serial::user_present() {
         cortex_m::asm::wfi();
     }
 
+    // initialize the CLI
+    let (cli_producer, mut cli_bytes_to_write) = unsafe { CLI_OUTPUT_QUEUE.split() };
+    let mut cli = cli::Cli::new(cli_producer);
+    let mut serial_read_queue = usb_serial::get_serial_input_pipe();
+
     // Check if there was a panic message, if so, send to UART
     if let Some(msg) = panic_persist::get_panic_message_bytes() {
-        unsafe {
-            USB_SERIAL.as_mut().unwrap().write(msg);
+        serial_write!("panic from previous boot:\n");
+        let mut bytes_written = 0;
+        // Write it out in chunks, waiting for USB interrupt handler to run in between before trying to shove more bytes
+        while bytes_written != msg.len() {
+            let chunk_written = usb_serial::get(|usbserial| usbserial.write(&msg[bytes_written..]));
+            bytes_written += chunk_written;
+            cortex_m::asm::wfi();
         }
     }
 
@@ -98,13 +106,20 @@ fn main() -> ! {
     imu.set_calibration_profile(BNO055_CALIBRATION, &mut delay)
         .unwrap();
 
-    // perpetually read out angle data
+    // workloop forever
     loop {
+        // handle our CLI
+        if let Some(new_byte) = cli_bytes_to_write.dequeue() {
+            usb_serial::get(|usbserial| usbserial.write(&[new_byte]));
+        }
+        if let Some(new_byte) = serial_read_queue.dequeue() {
+            cli.input_from_serial(new_byte);
+        }
+
         // Get gravity vector
         let angles_res = imu.gravity_fixed();
         if let Ok(angles) = angles_res {
             serial_write!(
-                USB_SERIAL,
                 "G:{},{},{}\n",
                 (angles.x as isize * 10),
                 (angles.y as isize * 10),
@@ -116,7 +131,6 @@ fn main() -> ! {
         let lin_accel = imu.linear_acceleration_fixed();
         if let Ok(acc) = lin_accel {
             serial_write!(
-                USB_SERIAL,
                 "A:{},{},{}\n",
                 (acc.x as isize * 10),
                 (acc.y as isize * 10),
@@ -129,28 +143,14 @@ fn main() -> ! {
 fn handle_bno_err(error: &bno055::Error<hal::sercom::v1::I2CError>, delay: &mut Delay) -> ! {
     loop {
         delay.delay_ms(500_u32);
-        serial_write!(USB_SERIAL, "imu err: ");
+        serial_write!("imu err: ");
         match error {
             bno055::Error::I2c(hal::sercom::v1::I2CError::Nack) => {
-                serial_write!(USB_SERIAL, "I2c nak\r\n")
+                serial_write!("I2c nak\r\n")
             }
-            bno055::Error::I2c(_) => serial_write!(USB_SERIAL, "I2c\r\n"),
-            bno055::Error::InvalidChipId(_) => serial_write!(USB_SERIAL, "InvalidChipId\r\n"),
-            bno055::Error::InvalidMode => serial_write!(USB_SERIAL, "InvalidMode\r\n"),
+            bno055::Error::I2c(_) => serial_write!("I2c\r\n"),
+            bno055::Error::InvalidChipId(_) => serial_write!("InvalidChipId\r\n"),
+            bno055::Error::InvalidMode => serial_write!("InvalidMode\r\n"),
         };
-    }
-}
-
-#[interrupt]
-fn USB() {
-    let mut buf = [0u8; 64];
-    unsafe {
-        if let Some(serial) = USB_SERIAL.as_mut() {
-            let bytes_read = serial.poll(&mut buf);
-            serial.write(&buf[0..bytes_read]);
-            if bytes_read != 0 {
-                SHOULD_START.store(true, core::sync::atomic::Ordering::Release);
-            }
-        }
     }
 }
