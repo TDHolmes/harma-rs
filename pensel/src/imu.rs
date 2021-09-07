@@ -83,8 +83,8 @@ where
     }
 }
 
-const GRAVITY_ARG: &'static str = "gravity";
-const ACCEL_ARG: &'static str = "accel";
+const GRAVITY_ARG: &str = "gravity";
+const ACCEL_ARG: &str = "accel";
 
 fn imu_control<const N: usize>(
     _menu: &menu::Menu<cli::CliOutput<N>>,
