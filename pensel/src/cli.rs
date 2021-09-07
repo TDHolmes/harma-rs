@@ -1,13 +1,13 @@
 //! Manages the command line interface. Uses `menu` under the hood.
 use heapless::spsc::Producer;
-use menu::{Item, ItemType, Menu};
 
 /// The size of our CLI queue structures
 pub const CLI_QUEUE_SIZE: usize = 256;
 
 static mut MENU_BUFFER: [u8; CLI_QUEUE_SIZE] = [0; CLI_QUEUE_SIZE];
 
-struct CliOutput<'a, const N: usize> {
+/// How our `menu` based CLI outputs to the user. Not for direct consumption.
+pub struct CliOutput<'a, const N: usize> {
     /// Bytes coming from our CLI to be output to the serial port
     cli_output_queue: Producer<'a, u8, N>,
 }
@@ -28,6 +28,9 @@ impl<'a, const N: usize> core::fmt::Write for CliOutput<'a, { N }> {
         Ok(())
     }
 }
+
+/// The type we need to return if we want an item in the CLI
+pub type CliItem = menu::Item<'static, CliOutput<'static, CLI_QUEUE_SIZE>>;
 
 /// Our encapsulation of the CLI
 pub struct Cli<'a, const N: usize> {
@@ -62,23 +65,27 @@ impl<'a> Cli<'a, CLI_QUEUE_SIZE> {
     }
 }
 
-const ROOT_MENU: Menu<CliOutput<CLI_QUEUE_SIZE>> = Menu {
-    label: "root",
-    items: &[&Item {
-        item_type: ItemType::Callback {
+const fn generate_panic_item() -> CliItem {
+    menu::Item {
+        item_type: menu::ItemType::Callback {
             function: panic,
             parameters: &[],
         },
         command: "panic",
         help: Some("Tests our panic handling by forcing one to happen"),
-    }],
+    }
+}
+
+const ROOT_MENU: menu::Menu<CliOutput<CLI_QUEUE_SIZE>> = menu::Menu {
+    label: "root",
+    items: &[&generate_panic_item(), &crate::imu::generate_imu_item()],
     entry: None,
     exit: None,
 };
 
 fn panic<const N: usize>(
-    _menu: &Menu<CliOutput<N>>,
-    _item: &Item<CliOutput<N>>,
+    _menu: &menu::Menu<CliOutput<N>>,
+    _item: &menu::Item<CliOutput<N>>,
     _args: &[&str],
     _context: &mut CliOutput<N>,
 ) {

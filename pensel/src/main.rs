@@ -84,7 +84,7 @@ fn main() -> ! {
 
         // Get gravity vector
         let angles_res = imu.gravity_fixed();
-        if let Ok(angles) = angles_res {
+        if let Some(angles) = angles_res {
             serial_write!(
                 "G:{},{},{}\n",
                 (angles.x as isize * 10),
@@ -95,7 +95,7 @@ fn main() -> ! {
 
         // get acceleration
         let lin_accel = imu.linear_acceleration_fixed();
-        if let Ok(acc) = lin_accel {
+        if let Some(acc) = lin_accel {
             serial_write!(
                 "A:{},{},{}\n",
                 (acc.x as isize * 10),
