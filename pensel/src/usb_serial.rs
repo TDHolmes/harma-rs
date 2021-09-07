@@ -10,6 +10,7 @@ use heapless::spsc::{Consumer, Producer, Queue};
 use usb_device::{class_prelude::UsbBusAllocator, prelude::*};
 use usbd_serial::{SerialPort, USB_CLASS_CDC};
 
+/// Our global singleton for USB serial communication
 pub struct UsbSerial<'a> {
     usb_serial: SerialPort<'a, UsbBus>,
     usb_dev: UsbDevice<'a, UsbBus>,

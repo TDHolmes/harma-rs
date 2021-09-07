@@ -2,6 +2,7 @@
 use heapless::spsc::Producer;
 use menu::{Item, ItemType, Menu};
 
+/// The size of our CLI queue structures
 pub const CLI_QUEUE_SIZE: usize = 256;
 
 static mut MENU_BUFFER: [u8; CLI_QUEUE_SIZE] = [0; CLI_QUEUE_SIZE];
