@@ -1,5 +1,6 @@
 #![no_std]
 pub mod cli;
+pub mod imu;
 pub mod prelude;
 pub mod usb_serial;
 

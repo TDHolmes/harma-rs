@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use pensel::{bsp, cli, hal, pac, serial_write, usb_serial};
+use pensel::{bsp, cli, hal, imu::Imu, pac, serial_write, usb_serial};
 
 use heapless::spsc::Queue;
 use panic_persist as _;
@@ -10,32 +10,7 @@ use bsp::entry;
 use hal::{clock::GenericClockController, delay::Delay, prelude::*};
 use pac::{CorePeripherals, Peripherals};
 
-const BNO055_CALIBRATION: bno055::BNO055Calibration = bno055::BNO055Calibration {
-    acc_offset_x_lsb: 2,
-    acc_offset_x_msb: 0,
-    acc_offset_y_lsb: 252,
-    acc_offset_y_msb: 255,
-    acc_offset_z_lsb: 231,
-    acc_offset_z_msb: 255,
-    mag_offset_x_lsb: 215,
-    mag_offset_x_msb: 254,
-    mag_offset_y_lsb: 174,
-    mag_offset_y_msb: 1,
-    mag_offset_z_lsb: 228,
-    mag_offset_z_msb: 1,
-    gyr_offset_x_lsb: 1,
-    gyr_offset_x_msb: 0,
-    gyr_offset_y_lsb: 0,
-    gyr_offset_y_msb: 0,
-    gyr_offset_z_lsb: 0,
-    gyr_offset_z_msb: 0,
-    acc_radius_lsb: 232,
-    acc_radius_msb: 3,
-    mag_radius_lsb: 241,
-    mag_radius_msb: 2,
-};
-
-/// Derp
+/// The queue for our CLI abstraction to write out to the serial port
 static mut CLI_OUTPUT_QUEUE: Queue<u8, { cli::CLI_QUEUE_SIZE }> = Queue::new();
 
 #[entry]
@@ -95,16 +70,7 @@ fn main() -> ! {
         }
     }
 
-    // initialize the IMU
-    let mut imu = bno055::Bno055::new(i2c).with_alternative_address();
-    if let Err(err) = imu.init(&mut delay) {
-        handle_bno_err(&err, &mut delay);
-    }
-    imu.set_mode(bno055::BNO055OperationMode::NDOF, &mut delay)
-        .unwrap();
-
-    imu.set_calibration_profile(BNO055_CALIBRATION, &mut delay)
-        .unwrap();
+    let mut imu = Imu::new(&mut delay, i2c);
 
     // workloop forever
     loop {
@@ -137,20 +103,5 @@ fn main() -> ! {
                 (acc.z as isize * 10)
             );
         }
-    }
-}
-
-fn handle_bno_err(error: &bno055::Error<hal::sercom::v1::I2CError>, delay: &mut Delay) -> ! {
-    loop {
-        delay.delay_ms(500_u32);
-        serial_write!("imu err: ");
-        match error {
-            bno055::Error::I2c(hal::sercom::v1::I2CError::Nack) => {
-                serial_write!("I2c nak\r\n")
-            }
-            bno055::Error::I2c(_) => serial_write!("I2c\r\n"),
-            bno055::Error::InvalidChipId(_) => serial_write!("InvalidChipId\r\n"),
-            bno055::Error::InvalidMode => serial_write!("InvalidMode\r\n"),
-        };
     }
 }
