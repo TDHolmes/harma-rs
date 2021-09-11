@@ -58,15 +58,15 @@ impl PenselSerial {
 
     pub fn parse_line(&self, line: &str) -> types::ParsedLine {
         if let Some(accel) = self.re_accel.captures(line) {
-            let x = accel.get(1).unwrap().as_str().parse::<isize>().unwrap();
-            let y = accel.get(2).unwrap().as_str().parse::<isize>().unwrap();
-            let z = accel.get(3).unwrap().as_str().parse::<isize>().unwrap();
-            return types::ParsedLine::Accel(types::AccelerationVec { x, y, z });
+            let x = accel.get(1).unwrap().as_str().parse::<i16>().unwrap();
+            let y = accel.get(2).unwrap().as_str().parse::<i16>().unwrap();
+            let z = accel.get(3).unwrap().as_str().parse::<i16>().unwrap();
+            return types::ParsedLine::Accel(types::FixedPointVector { x, y, z });
         } else if let Some(grav) = self.re_gravity.captures(line) {
-            let x = grav.get(1).unwrap().as_str().parse::<isize>().unwrap();
-            let y = grav.get(2).unwrap().as_str().parse::<isize>().unwrap();
-            let z = grav.get(3).unwrap().as_str().parse::<isize>().unwrap();
-            return types::ParsedLine::Grav(types::GravityVec { x, y, z });
+            let x = grav.get(1).unwrap().as_str().parse::<i16>().unwrap();
+            let y = grav.get(2).unwrap().as_str().parse::<i16>().unwrap();
+            let z = grav.get(3).unwrap().as_str().parse::<i16>().unwrap();
+            return types::ParsedLine::Grav(types::FixedPointVector { x, y, z });
         }
 
         types::ParsedLine::None
@@ -74,8 +74,8 @@ impl PenselSerial {
 
     pub fn parse_data_until(
         &mut self,
-        mut accel_queue: Producer<types::AccelerationVec, { types::ACC_QUEUE_SIZE }>,
-        mut grav_queue: Producer<types::AccelerationVec, { types::GRAV_QUEUE_SIZE }>,
+        mut accel_queue: Producer<types::FixedPointVector, { types::ACC_QUEUE_SIZE }>,
+        mut grav_queue: Producer<types::FixedPointVector, { types::GRAV_QUEUE_SIZE }>,
         should_run: Arc<AtomicBool>,
     ) {
         let mut serial_read_buf: [u8; 128] = [0; 128];
@@ -125,8 +125,8 @@ mod comm_test {
     use crate::mock_serial::MockSerial;
     use heapless::spsc::Queue;
 
-    static mut A_QUEUE: Queue<types::AccelerationVec, { types::ACC_QUEUE_SIZE }> = Queue::new();
-    static mut G_QUEUE: Queue<types::GravityVec, { types::GRAV_QUEUE_SIZE }> = Queue::new();
+    static mut A_QUEUE: Queue<types::FixedPointVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
+    static mut G_QUEUE: Queue<types::FixedPointVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
     const EXAMPLE_ACCEL_LINE: &str = "A:1,2,3\n";
     const EXAMPLE_GRAVITY_LINE: &str = "G:1,2,3\n";

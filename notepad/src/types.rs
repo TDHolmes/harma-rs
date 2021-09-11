@@ -1,17 +1,13 @@
 use mint;
 
-/// The gravity vector determined by Pensel
-pub type GravityVec = mint::Vector3<isize>;
-
-/// The net linear acceleration determined by Pensel
-pub type AccelerationVec = mint::Vector3<isize>;
+pub use pensel_types::imu::FixedPointVector;
 
 /// The possible outcomes of parsing a line of data from Pensel
 #[derive(PartialEq, Debug)]
 pub enum ParsedLine {
     None,
-    Grav(GravityVec),
-    Accel(AccelerationVec),
+    Grav(FixedPointVector),
+    Accel(FixedPointVector),
 }
 
 pub const ACC_QUEUE_SIZE: usize = 100;
@@ -26,7 +22,7 @@ mod test_types {
         let mut test_line = ParsedLine::None;
 
         assert_eq!(test_line, ParsedLine::None);
-        test_line = ParsedLine::Accel(AccelerationVec { x: 1, y: 2, z: 3 });
+        test_line = ParsedLine::Accel(FixedPointVector { x: 1, y: 2, z: 3 });
         assert_ne!(test_line, ParsedLine::None);
     }
 }

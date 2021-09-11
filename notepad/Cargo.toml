@@ -14,6 +14,9 @@ serialport = "4"
 mint = "0.5"
 heapless = "0.7"
 
+[dependencies.pensel-types]
+path = "../pensel-types"
+
 [dev-dependencies]
 textplots = "0.8"
 rgb = "0.8"

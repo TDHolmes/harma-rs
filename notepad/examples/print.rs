@@ -10,11 +10,11 @@ use std::{
 
 use notepad::{
     comms,
-    types::{self, AccelerationVec, GravityVec},
+    types::{self, FixedPointVector},
 };
 
-static mut A_QUEUE: Queue<AccelerationVec, { types::ACC_QUEUE_SIZE }> = Queue::new();
-static mut G_QUEUE: Queue<GravityVec, { types::GRAV_QUEUE_SIZE }> = Queue::new();
+static mut A_QUEUE: Queue<FixedPointVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
+static mut G_QUEUE: Queue<FixedPointVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
 fn main() {
     let should_run = Arc::new(AtomicBool::new(true));
