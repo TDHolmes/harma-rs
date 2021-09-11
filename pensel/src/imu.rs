@@ -1,5 +1,6 @@
 //! Encapsulation of the details of our IMU
 use crate::cli;
+use pensel_types::{bno055, cli as pt_cli, imu::FixedPointVector};
 
 use core::sync::atomic;
 
@@ -65,7 +66,7 @@ where
     }
 
     /// Retrieves the current gravity vector as calculated by the bno055
-    pub fn gravity_fixed(&mut self) -> Option<bno055::mint::Vector3<i16>> {
+    pub fn gravity_fixed(&mut self) -> Option<FixedPointVector> {
         if CLI_CONTROL_STREAM_GRAVITY.load(atomic::Ordering::Acquire) {
             return self.bno.gravity_fixed().ok();
         }
@@ -74,7 +75,7 @@ where
     }
 
     /// Retrieves the current linear acceleration from the bno055
-    pub fn linear_acceleration_fixed(&mut self) -> Option<bno055::mint::Vector3<i16>> {
+    pub fn linear_acceleration_fixed(&mut self) -> Option<FixedPointVector> {
         if CLI_CONTROL_STREAM_ACCEL.load(atomic::Ordering::Acquire) {
             return self.bno.linear_acceleration_fixed().ok();
         }
@@ -83,17 +84,14 @@ where
     }
 }
 
-const GRAVITY_ARG: &str = "gravity";
-const ACCEL_ARG: &str = "accel";
-
 fn imu_control<const N: usize>(
     _menu: &menu::Menu<cli::CliOutput<N>>,
     item: &menu::Item<cli::CliOutput<N>>,
     args: &[&str],
     _context: &mut cli::CliOutput<N>,
 ) {
-    let enable_accel = menu::argument_finder(item, args, ACCEL_ARG).is_ok();
-    let enable_grav = menu::argument_finder(item, args, GRAVITY_ARG).is_ok();
+    let enable_accel = menu::argument_finder(item, args, pt_cli::ARG_ACCEL).is_ok();
+    let enable_grav = menu::argument_finder(item, args, pt_cli::ARG_GRAVITY).is_ok();
 
     CLI_CONTROL_STREAM_GRAVITY.store(enable_grav, atomic::Ordering::Release);
     CLI_CONTROL_STREAM_ACCEL.store(enable_accel, atomic::Ordering::Release);
@@ -106,16 +104,16 @@ pub const fn generate_imu_item() -> cli::CliItem {
             function: imu_control,
             parameters: &[
                 menu::Parameter::Named {
-                    parameter_name: ACCEL_ARG,
+                    parameter_name: pt_cli::ARG_ACCEL,
                     help: Some("Enable streaming of accel vector"),
                 },
                 menu::Parameter::Named {
-                    parameter_name: GRAVITY_ARG,
+                    parameter_name: pt_cli::ARG_GRAVITY,
                     help: Some("Enable streaming of gravity vector"),
                 },
             ],
         },
-        command: "imu",
+        command: pt_cli::CMD_IMU,
         help: Some("Controls how our IMU functions"),
     }
 }

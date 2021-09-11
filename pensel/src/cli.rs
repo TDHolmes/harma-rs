@@ -1,6 +1,8 @@
 //! Manages the command line interface. Uses `menu` under the hood.
 use heapless::spsc::Producer;
 
+use pensel_types::cli as pt_cli;
+
 /// The size of our CLI queue structures
 pub const CLI_QUEUE_SIZE: usize = 256;
 
@@ -71,7 +73,7 @@ const fn generate_panic_item() -> CliItem {
             function: panic,
             parameters: &[],
         },
-        command: "panic",
+        command: pt_cli::CMD_PANIC,
         help: Some("Tests our panic handling by forcing one to happen"),
     }
 }
