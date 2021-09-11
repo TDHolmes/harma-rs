@@ -67,20 +67,18 @@ impl<'a> Cli<'a, CLI_QUEUE_SIZE> {
     }
 }
 
-const fn generate_panic_item() -> CliItem {
-    menu::Item {
-        item_type: menu::ItemType::Callback {
-            function: panic,
-            parameters: &[],
-        },
-        command: pt_cli::CMD_PANIC,
-        help: Some("Tests our panic handling by forcing one to happen"),
-    }
-}
+const PANIC_CLI_ITEM: CliItem = CliItem {
+    item_type: menu::ItemType::Callback {
+        function: panic,
+        parameters: &[],
+    },
+    command: pt_cli::CMD_PANIC,
+    help: Some("Tests our panic handling by forcing one to happen"),
+};
 
 const ROOT_MENU: menu::Menu<CliOutput<CLI_QUEUE_SIZE>> = menu::Menu {
     label: "root",
-    items: &[&generate_panic_item(), &crate::imu::generate_imu_item()],
+    items: &[&PANIC_CLI_ITEM, &crate::imu::IMU_CLI_ITEM],
     entry: None,
     exit: None,
 };

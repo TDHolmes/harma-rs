@@ -1,6 +1,6 @@
 [package]
 authors = ["Tyler Holmes <tyler@holmesengineering.com>"]
-edition = "2021"
+edition = "2018"
 readme = "README.md"
 name = "pensel"
 version = "0.1.0"

@@ -98,22 +98,20 @@ fn imu_control<const N: usize>(
 }
 
 /// Method to put our CLI entry in for IMU control
-pub const fn generate_imu_item() -> cli::CliItem {
-    menu::Item {
-        item_type: menu::ItemType::Callback {
-            function: imu_control,
-            parameters: &[
-                menu::Parameter::Named {
-                    parameter_name: pt_cli::ARG_ACCEL,
-                    help: Some("Enable streaming of accel vector"),
-                },
-                menu::Parameter::Named {
-                    parameter_name: pt_cli::ARG_GRAVITY,
-                    help: Some("Enable streaming of gravity vector"),
-                },
-            ],
-        },
-        command: pt_cli::CMD_IMU,
-        help: Some("Controls how our IMU functions"),
-    }
-}
+pub const IMU_CLI_ITEM: cli::CliItem = cli::CliItem {
+    item_type: menu::ItemType::Callback {
+        function: imu_control,
+        parameters: &[
+            menu::Parameter::Named {
+                parameter_name: pt_cli::ARG_ACCEL,
+                help: Some("Enable streaming of accel vector"),
+            },
+            menu::Parameter::Named {
+                parameter_name: pt_cli::ARG_GRAVITY,
+                help: Some("Enable streaming of gravity vector"),
+            },
+        ],
+    },
+    command: pt_cli::CMD_IMU,
+    help: Some("Controls how our IMU functions"),
+};
