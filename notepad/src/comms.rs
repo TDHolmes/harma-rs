@@ -241,15 +241,15 @@ mod comm_test {
             serial.parse_data_until(a_producer, g_producer, should_run_thread_ref)
         });
 
-        let (mut accel_received, mut gravity_recevied) = (false, false);
-        while !accel_received || !gravity_recevied {
+        let (mut accel_received, mut gravity_received) = (false, false);
+        while !accel_received || !gravity_received {
             if let Some(a) = a_consumer.dequeue() {
                 println!("A: {:?}", a);
                 accel_received = true;
             }
             if let Some(g) = g_consumer.dequeue() {
                 println!("G: {:?}", g);
-                gravity_recevied = true;
+                gravity_received = true;
             }
         }
 
