@@ -51,8 +51,8 @@ impl PenselSerial {
     /// Sends the given command over serial. Currently doesn't check if pensel received it properly
     pub fn send_command(&mut self, command: &str) -> Result<(), serialport::Error> {
         println!("sending command '{}'", command);
-        self.port.write(command.as_bytes())?;
-        self.port.write("\r".as_bytes())?;
+        self.port.write_all(command.as_bytes())?;
+        self.port.write_all("\r".as_bytes())?;
         self.wait_for(command)?;
         Ok(())
     }
