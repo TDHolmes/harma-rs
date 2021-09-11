@@ -3,15 +3,11 @@
 
 use pensel::{bsp, cli, hal, imu::Imu, pac, serial_write, usb_serial};
 
-use heapless::spsc::Queue;
 use panic_persist as _;
 
 use bsp::entry;
 use hal::{clock::GenericClockController, delay::Delay, prelude::*};
 use pac::{CorePeripherals, Peripherals};
-
-/// The queue for our CLI abstraction to write out to the serial port
-static mut CLI_OUTPUT_QUEUE: Queue<u8, { cli::CLI_QUEUE_SIZE }> = Queue::new();
 
 #[entry]
 fn main() -> ! {
@@ -54,7 +50,7 @@ fn main() -> ! {
     }
 
     // initialize the CLI
-    let (cli_producer, mut cli_bytes_to_write) = unsafe { CLI_OUTPUT_QUEUE.split() };
+    let (cli_producer, mut cli_bytes_to_write) = unsafe { cli::CLI_OUTPUT_QUEUE.split() };
     let mut cli = cli::Cli::new(cli_producer);
     let mut serial_read_queue = usb_serial::get_serial_input_pipe();
 

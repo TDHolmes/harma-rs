@@ -1,12 +1,15 @@
 //! Manages the command line interface. Uses `menu` under the hood.
-use heapless::spsc::Producer;
+use heapless::spsc::{Producer, Queue};
 
 use pensel_types::cli as pt_cli;
 
-/// The size of our CLI queue structures
-pub const CLI_QUEUE_SIZE: usize = 256;
+/// The size of our CLI queue structures. Current largest output: `help imu` at ~200 bytes
+pub const CLI_QUEUE_SIZE: usize = 512;
 
 static mut MENU_BUFFER: [u8; CLI_QUEUE_SIZE] = [0; CLI_QUEUE_SIZE];
+
+/// The queue for our CLI abstraction to write out to the serial port
+pub static mut CLI_OUTPUT_QUEUE: Queue<u8, { CLI_QUEUE_SIZE }> = Queue::new();
 
 /// How our `menu` based CLI outputs to the user. Not for direct consumption.
 pub struct CliOutput<'a, const N: usize> {
@@ -22,7 +25,37 @@ impl<'a, const N: usize> CliOutput<'a, { N }> {
 
 impl<'a, const N: usize> core::fmt::Write for CliOutput<'a, { N }> {
     fn write_str(&mut self, s: &str) -> Result<(), core::fmt::Error> {
+        #[cfg(debug_assertions)]
+        let high_watermark = N * 3 / 4;
+
         for byte in s.bytes() {
+            #[cfg(debug_assertions)]
+            {
+                if self.cli_output_queue.len() > high_watermark {
+                    // dump out CLI queue bytes. Disable interrupts to make this
+                    //   sketchy global unsafe mess a little less unsafe. We're
+                    //   crashing and burning anyways
+                    cortex_m::interrupt::free(|_| unsafe {
+                        let cli_queue = &mut CLI_OUTPUT_QUEUE;
+                        let recent_bytes = [
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                            cli_queue.dequeue_unchecked(),
+                        ];
+                        panic!(
+                            "CliOutput hit high watermark. Recent input: '{}'",
+                            core::str::from_utf8_unchecked(&recent_bytes)
+                        );
+                    });
+                }
+            }
             if self.cli_output_queue.enqueue(byte).is_err() {
                 return Err(core::fmt::Error);
             }

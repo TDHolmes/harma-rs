@@ -12,6 +12,7 @@ cortex-m-rt = "0.6"
 panic-persist = "0.2"
 menu = "0.3"
 embedded-hal = "0.2"
+chek = "0.1"
 
 # dependencies for usb serial printing
 usb-device = "0.2"
@@ -29,14 +30,13 @@ git = "https://github.com/atsamd-rs/atsamd/"
 [features]
 default = []
 
-# this lets you use `cargo fix`!
-[[bin]]
-name = "pensel"
-test = false
-bench = false
-
 [profile.release]
 debug = true        # symbols are nice and they don't increase the size on Flash
 opt-level = "z"     # optimize for size
 codegen-units = 1   # better optimization per-crate
 lto = true          # optimize at link time across all crates
+
+[profile.dev]
+debug = true        # symbols are nice and they don't increase the size on Flash
+opt-level = 1       # some light optimization to get better size
+codegen-units = 1   # better optimization per-crate
