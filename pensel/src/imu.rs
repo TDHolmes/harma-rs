@@ -39,8 +39,8 @@ const BNO055_CALIBRATION: bno055::BNO055Calibration = bno055::BNO055Calibration 
     mag_radius_msb: 2,
 };
 
-static CLI_CONTROL_STREAM_GRAVITY: atomic::AtomicBool = atomic::AtomicBool::new(true);
-static CLI_CONTROL_STREAM_ACCEL: atomic::AtomicBool = atomic::AtomicBool::new(true);
+static CLI_CONTROL_STREAM_GRAVITY: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static CLI_CONTROL_STREAM_ACCEL: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 impl<I, E> Imu<I>
 where
@@ -90,11 +90,18 @@ fn imu_control<const N: usize>(
     args: &[&str],
     _context: &mut cli::CliOutput<N>,
 ) {
-    let enable_accel = menu::argument_finder(item, args, pt_cli::ARG_ACCEL).is_ok();
-    let enable_grav = menu::argument_finder(item, args, pt_cli::ARG_GRAVITY).is_ok();
+    let mut enable_accel = false;
+    let mut enable_grav = false;
+    if let Ok(Some(_)) = menu::argument_finder(item, args, pt_cli::ARG_ACCEL) {
+        enable_accel = true;
+    }
 
-    CLI_CONTROL_STREAM_GRAVITY.store(enable_grav, atomic::Ordering::Release);
+    if let Ok(Some(_)) = menu::argument_finder(item, args, pt_cli::ARG_GRAVITY) {
+        enable_grav = true;
+    }
+
     CLI_CONTROL_STREAM_ACCEL.store(enable_accel, atomic::Ordering::Release);
+    CLI_CONTROL_STREAM_GRAVITY.store(enable_grav, atomic::Ordering::Release);
 }
 
 /// Method to put our CLI entry in for IMU control
