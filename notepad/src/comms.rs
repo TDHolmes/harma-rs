@@ -48,11 +48,35 @@ impl PenselSerial {
         panic!("no matching port found");
     }
 
-    pub fn read_raw(&mut self, buffer: &mut [u8]) -> usize {
-        if let Ok(len_read) = self.port.read(buffer) {
-            len_read
-        } else {
-            0
+    /// Sends the given command over serial. Currently doesn't check if pensel received it properly
+    pub fn send_command(&mut self, command: &str) -> Result<(), serialport::Error> {
+        println!("sending command '{}'", command);
+        self.port.write(command.as_bytes())?;
+        self.port.write("\r".as_bytes())?;
+        self.wait_for(command)?;
+        Ok(())
+    }
+
+    fn wait_for(&mut self, line: &str) -> Result<(), std::io::Error> {
+        let mut write_index = 0;
+        let mut read_buf: [u8; 1024] = [0; 1024];
+
+        loop {
+            let size_read = self.port.read(&mut read_buf[write_index..])?;
+            let sub_string =
+                std::str::from_utf8(&read_buf[write_index..write_index + size_read]).unwrap();
+            print!("{}", sub_string);
+            write_index += size_read;
+            let string = std::str::from_utf8(&read_buf[0..write_index]).unwrap();
+            if string.contains(line) {
+                return Ok(());
+            }
+            if write_index == read_buf.len() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::OutOfMemory,
+                    "Ran out of buffer waiting",
+                ));
+            }
         }
     }
 
@@ -84,8 +108,15 @@ impl PenselSerial {
 
         loop {
             // read out some bytes and try to parse it, line by line
-            let bytes_read = self.read_raw(&mut serial_read_buf[write_index..]);
-            write_index += bytes_read;
+            let read_res = self.port.read(&mut serial_read_buf[write_index..]);
+            if let Ok(bytes_read) = read_res {
+                write_index += bytes_read;
+            } else if let Err(error) = read_res {
+                if error.kind() == std::io::ErrorKind::BrokenPipe {
+                    eprintln!("serial port disconnected");
+                    should_run.as_ref().store(false, Ordering::Release);
+                }
+            }
 
             let str_to_search = std::str::from_utf8(&serial_read_buf[0..write_index]).unwrap();
             for line in str_to_search.lines() {

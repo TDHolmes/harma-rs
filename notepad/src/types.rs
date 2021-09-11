@@ -1,5 +1,6 @@
-use mint;
+//! Types notepad uses
 
+/// the shared vector type pensel firmware produces
 pub use pensel_types::imu::FixedPointVector;
 
 /// The possible outcomes of parsing a line of data from Pensel

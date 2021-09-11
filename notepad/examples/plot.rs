@@ -13,11 +13,12 @@ use textplots::{Chart, ColorPlot, Shape};
 
 use notepad::{
     comms,
-    types::{self, AccelerationVec, GravityVec},
+    types::{self, FixedPointVector},
 };
+use pensel_types::cli;
 
-static mut A_QUEUE: Queue<AccelerationVec, { types::ACC_QUEUE_SIZE }> = Queue::new();
-static mut G_QUEUE: Queue<GravityVec, { types::GRAV_QUEUE_SIZE }> = Queue::new();
+static mut A_QUEUE: Queue<FixedPointVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
+static mut G_QUEUE: Queue<FixedPointVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
 const PURPLE: RGB8 = RGB8::new(0xE0, 0x80, 0xFF);
 const RED: RGB8 = RGB8::new(0xFF, 0x00, 0x00);
@@ -30,6 +31,15 @@ fn main() {
     let should_run_thread_ref = should_run.clone();
     let should_ctrlc_ref = should_run.clone();
     let mut serial = comms::PenselSerial::new_first_matching();
+
+    // enable streaming, if it isn't already
+    let enable_streaming_cmd = format!(
+        "{} --{} --{}",
+        cli::CMD_IMU,
+        cli::ARG_ACCEL,
+        cli::ARG_GRAVITY
+    );
+    serial.send_command(&enable_streaming_cmd).unwrap();
 
     let (a_producer, mut a_consumer) = unsafe { A_QUEUE.split() };
     let (g_producer, mut g_consumer) = unsafe { G_QUEUE.split() };
