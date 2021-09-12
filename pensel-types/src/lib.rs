@@ -10,6 +10,9 @@ pub mod cli {
     /// the command to trigger a forced panic
     pub const CMD_PANIC: &str = "panic";
 
+    /// initiates an MCU reset
+    pub const CMD_RESET: &str = "reset";
+
     /// the command to control the IMU
     pub const CMD_IMU: &str = "imu";
     /// argument to `imu` command to enable streaming of the gravity vector

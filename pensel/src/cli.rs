@@ -109,9 +109,23 @@ const PANIC_CLI_ITEM: CliItem = CliItem {
     help: Some("Tests our panic handling by forcing one to happen"),
 };
 
+const RESET_CLI_ITEM: CliItem = CliItem {
+    item_type: menu::ItemType::Callback {
+        function: reset,
+        parameters: &[],
+    },
+    command: pt_cli::CMD_RESET,
+    help: Some("initiates an MCU reset"),
+};
+
 const ROOT_MENU: menu::Menu<CliOutput<CLI_QUEUE_SIZE>> = menu::Menu {
     label: "root",
-    items: &[&PANIC_CLI_ITEM, &crate::imu::IMU_CLI_ITEM],
+    items: &[
+        &PANIC_CLI_ITEM,
+        &RESET_CLI_ITEM,
+        &crate::imu::IMU_CLI_ITEM,
+        &crate::usb_serial_log::LOG_CLI_ITEM,
+    ],
     entry: None,
     exit: None,
 };
@@ -123,4 +137,13 @@ fn panic<const N: usize>(
     _context: &mut CliOutput<N>,
 ) {
     panic!("test panic");
+}
+
+fn reset<const N: usize>(
+    _menu: &menu::Menu<CliOutput<N>>,
+    _item: &menu::Item<CliOutput<N>>,
+    _args: &[&str],
+    _context: &mut CliOutput<N>,
+) {
+    cortex_m::peripheral::SCB::sys_reset();
 }
