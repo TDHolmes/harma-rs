@@ -125,7 +125,7 @@ pub fn get_serial_input_pipe() -> Consumer<'static, u8, { cli::CLI_QUEUE_SIZE }>
     // Safety: Guaranteed to only do this once due to the check for `CLI_INPUT_PRODUCER`
     // being non-None & we disable interrupts while we do this check, since the interrupt
     // handler `USB` interacts with `CLI_INPUT_PRODUCER`.
-    cortex_m::interrupt::free(|_| unsafe {
+    usb_free(|_| unsafe {
         if CLI_INPUT_PRODUCER.is_some() {
             panic!("cannot call get_serial_input_pipe more than once");
         }
@@ -154,10 +154,27 @@ pub fn get<T, R>(borrower: T) -> R
 where
     T: Fn(&mut UsbSerial) -> R,
 {
-    cortex_m::interrupt::free(|_| unsafe {
+    usb_free(|_| unsafe {
         let mut usb_serial = USB_SERIAL.as_mut().expect("UsbSerial not initialized");
         borrower(&mut usb_serial)
     })
+}
+
+/// Execute closure `f` in an interrupt-free context.
+///
+/// This as also known as a "critical section".
+#[inline]
+fn usb_free<F, R>(f: F) -> R
+where
+    F: FnOnce(&cortex_m::interrupt::CriticalSection) -> R,
+{
+    NVIC::mask(interrupt::USB);
+
+    let r = f(unsafe { &cortex_m::interrupt::CriticalSection::new() });
+
+    unsafe { NVIC::unmask(interrupt::USB) };
+
+    r
 }
 
 /// Writes the given message out over USB serial.
