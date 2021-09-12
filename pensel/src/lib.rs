@@ -5,6 +5,7 @@ pub mod cli;
 pub mod imu;
 pub mod prelude;
 pub mod usb_serial;
+pub mod usb_serial_log;
 
 /// re-export of our HAL and PAC layer, which in turn comes from our BSP
 pub use bsp::{hal, pac};

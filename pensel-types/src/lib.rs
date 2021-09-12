@@ -16,6 +16,13 @@ pub mod cli {
     pub const ARG_GRAVITY: &str = "gravity";
     /// argument to `imu` command to enable streaming of the accel vector
     pub const ARG_ACCEL: &str = "accel";
+
+    /// control our logging facilities
+    pub const CMD_LOG: &str = "log";
+    /// change log level
+    pub const ARG_LEVEL_SET: &str = "level";
+    /// retrieve current log level
+    pub const ARG_LEVEL_GET: &str = "level-get";
 }
 
 pub mod imu {

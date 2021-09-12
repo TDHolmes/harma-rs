@@ -3,6 +3,7 @@ use crate::cli;
 use pensel_types::{bno055, cli as pt_cli, imu::FixedPointVector};
 
 use core::sync::atomic;
+use log;
 
 use embedded_hal::blocking::{
     delay::DelayMs,
@@ -53,7 +54,7 @@ where
     /// `delay`: Facility for bno055 to delay during initialization/mode changes
     /// `i2c`: I2C bus that the bno055 is connected to
     pub fn new(delay: &mut dyn DelayMs<u16>, i2c: I) -> Self {
-        // initialize the IMU
+        log::debug!("initializing IMU");
         let mut bno = bno055::Bno055::new(i2c).with_alternative_address();
         bno.init(delay).expect("bno init err");
         bno.set_mode(bno055::BNO055OperationMode::NDOF, delay)
@@ -68,6 +69,7 @@ where
     /// Retrieves the current gravity vector as calculated by the bno055
     pub fn gravity_fixed(&mut self) -> Option<FixedPointVector> {
         if CLI_CONTROL_STREAM_GRAVITY.load(atomic::Ordering::Acquire) {
+            log::debug!("IMU - gravity_fixed");
             return self.bno.gravity_fixed().ok();
         }
 
@@ -77,6 +79,7 @@ where
     /// Retrieves the current linear acceleration from the bno055
     pub fn linear_acceleration_fixed(&mut self) -> Option<FixedPointVector> {
         if CLI_CONTROL_STREAM_ACCEL.load(atomic::Ordering::Acquire) {
+            log::debug!("IMU - linear_acceleration_fixed");
             return self.bno.linear_acceleration_fixed().ok();
         }
 
