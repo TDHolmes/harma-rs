@@ -49,3 +49,9 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --manifest-path ./pensel/Cargo.toml --target thumbv6m-none-eabi
         name: Pensel Clippy
+    - name: pensel-types clippy
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --manifest-path ./pensel-types/Cargo.toml
+        name: Pensel-Types Clippy

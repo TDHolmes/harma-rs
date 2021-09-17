@@ -47,7 +47,7 @@ pub mod imu {
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             /// checks for a decimal digit
             fn is_decimal_digit(input: char) -> bool {
-                return input.is_digit(10) || input == '-';
+                input.is_digit(10) || input == '-'
             }
 
             if !s.starts_with(P) {
@@ -56,8 +56,7 @@ pub mod imu {
 
             // split by comma and look for 3 digits to parse out
             let mut values: [i16; 3] = [0; 3];
-            let mut count = 0;
-            for item in s.split(",") {
+            for (count, item) in s.split(',').enumerate() {
                 if count == 3 {
                     return Err(core::fmt::Error);
                 }
@@ -71,10 +70,9 @@ pub mod imu {
                 } else {
                     return Err(core::fmt::Error);
                 }
-                count += 1;
             }
 
-            return Ok(Self::new(values[0], values[1], values[2]));
+            Ok(Self::new(values[0], values[1], values[2]))
         }
     }
 
