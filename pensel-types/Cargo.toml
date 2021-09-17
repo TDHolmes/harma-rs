@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 bno055 = "0.3.3"
+derive_more = {version = "0.99", features = ["from", "constructor", "deref"]}

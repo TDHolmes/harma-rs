@@ -1,6 +1,6 @@
 //! Encapsulation of the details of our IMU
 use crate::cli;
-use pensel_types::{bno055, cli as pt_cli, imu::FixedPointVector};
+use pensel_types::{bno055, cli as pt_cli, imu};
 
 use core::sync::atomic;
 use log;
@@ -67,20 +67,28 @@ where
     }
 
     /// Retrieves the current gravity vector as calculated by the bno055
-    pub fn gravity_fixed(&mut self) -> Option<FixedPointVector> {
+    pub fn gravity_fixed(&mut self) -> Option<imu::GravityVector> {
         if CLI_CONTROL_STREAM_GRAVITY.load(atomic::Ordering::Acquire) {
             log::debug!("IMU - gravity_fixed");
-            return self.bno.gravity_fixed().ok();
+            if let Ok(g_vec) = self.bno.gravity_fixed() {
+                return Some(g_vec.into());
+            } else {
+                return None;
+            }
         }
 
         None
     }
 
     /// Retrieves the current linear acceleration from the bno055
-    pub fn linear_acceleration_fixed(&mut self) -> Option<FixedPointVector> {
+    pub fn linear_acceleration_fixed(&mut self) -> Option<imu::AccelerationVector> {
         if CLI_CONTROL_STREAM_ACCEL.load(atomic::Ordering::Acquire) {
             log::debug!("IMU - linear_acceleration_fixed");
-            return self.bno.linear_acceleration_fixed().ok();
+            if let Ok(a_vec) = self.bno.linear_acceleration_fixed() {
+                return Some(a_vec.into());
+            } else {
+                return None;
+            }
         }
 
         None

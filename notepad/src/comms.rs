@@ -1,29 +1,26 @@
 //! Takes care of all of the serial communication & parsing with Pensel
 use heapless::spsc::Producer;
-use regex::Regex;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    str::FromStr,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use crate::types;
 
+const ACCEL_PREFIX: &str = "A:";
+const GRAVITY_PREFIX: &str = "G:";
+
 pub struct PenselSerial {
     port: Box<dyn serialport::SerialPort>,
-    re_accel: Regex,
-    re_gravity: Regex,
 }
 
 impl PenselSerial {
     /// Creates a new instance of PenselSerial from the provided serial port trait object
     pub fn new(port: Box<dyn serialport::SerialPort>) -> PenselSerial {
-        let re_accel = Regex::new(r"A:([-\d]+),([-\d]+),([-\d]+)").unwrap();
-        let re_gravity = Regex::new(r"G:([-\d]+),([-\d]+),([-\d]+)").unwrap();
-        PenselSerial {
-            port,
-            re_accel,
-            re_gravity,
-        }
+        PenselSerial { port }
     }
 
     /// Creates a new instance of PenselSerial from a port named `name`
@@ -81,16 +78,14 @@ impl PenselSerial {
     }
 
     pub fn parse_line(&self, line: &str) -> types::ParsedLine {
-        if let Some(accel) = self.re_accel.captures(line) {
-            let x = accel.get(1).unwrap().as_str().parse::<i16>().unwrap();
-            let y = accel.get(2).unwrap().as_str().parse::<i16>().unwrap();
-            let z = accel.get(3).unwrap().as_str().parse::<i16>().unwrap();
-            return types::ParsedLine::Accel(types::FixedPointVector { x, y, z });
-        } else if let Some(grav) = self.re_gravity.captures(line) {
-            let x = grav.get(1).unwrap().as_str().parse::<i16>().unwrap();
-            let y = grav.get(2).unwrap().as_str().parse::<i16>().unwrap();
-            let z = grav.get(3).unwrap().as_str().parse::<i16>().unwrap();
-            return types::ParsedLine::Grav(types::FixedPointVector { x, y, z });
+        if line.starts_with(ACCEL_PREFIX) {
+            if let Ok(accel) = types::imu::AccelerationVector::from_str(line) {
+                return types::ParsedLine::Accel(accel);
+            }
+        } else if line.starts_with(GRAVITY_PREFIX) {
+            if let Ok(gravity) = types::imu::GravityVector::from_str(line) {
+                return types::ParsedLine::Grav(gravity);
+            }
         }
 
         types::ParsedLine::None
@@ -98,8 +93,8 @@ impl PenselSerial {
 
     pub fn parse_data_until(
         &mut self,
-        mut accel_queue: Producer<types::FixedPointVector, { types::ACC_QUEUE_SIZE }>,
-        mut grav_queue: Producer<types::FixedPointVector, { types::GRAV_QUEUE_SIZE }>,
+        mut accel_queue: Producer<types::imu::AccelerationVector, { types::ACC_QUEUE_SIZE }>,
+        mut grav_queue: Producer<types::imu::GravityVector, { types::GRAV_QUEUE_SIZE }>,
         should_run: Arc<AtomicBool>,
     ) {
         let mut serial_read_buf: [u8; 128] = [0; 128];
@@ -156,11 +151,13 @@ mod comm_test {
     use crate::mock_serial::MockSerial;
     use heapless::spsc::Queue;
 
-    static mut A_QUEUE: Queue<types::FixedPointVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
-    static mut G_QUEUE: Queue<types::FixedPointVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
+    static mut A_QUEUE: Queue<types::imu::AccelerationVector, { types::ACC_QUEUE_SIZE }> =
+        Queue::new();
+    static mut G_QUEUE: Queue<types::imu::GravityVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
     const EXAMPLE_ACCEL_LINE: &str = "A:1,2,3\n";
     const EXAMPLE_GRAVITY_LINE: &str = "G:1,2,3\n";
+    const EXAMPLE_GRAVITY_LINE_NEG: &str = "G:-1,2,-3\n";
 
     #[test]
     fn create_pensel_serial() {
@@ -204,6 +201,25 @@ mod comm_test {
         assert_eq!(grav_pkt.x, 1);
         assert_eq!(grav_pkt.y, 2);
         assert_eq!(grav_pkt.z, 3);
+    }
+
+    #[test]
+    fn parse_grav_neg() {
+        let port = Box::new(MockSerial::default());
+        let comm = PenselSerial::new(port);
+
+        let res = comm.parse_line(EXAMPLE_GRAVITY_LINE_NEG);
+        let grav_pkt = match res {
+            types::ParsedLine::Grav(g) => g,
+            _ => panic!(
+                "Line '{}' parsed incorrectly to {:#?}",
+                EXAMPLE_GRAVITY_LINE_NEG, res
+            ),
+        };
+
+        assert_eq!(grav_pkt.x, -1);
+        assert_eq!(grav_pkt.y, 2);
+        assert_eq!(grav_pkt.z, -3);
     }
 
     #[test]

@@ -10,12 +10,12 @@ use std::{
 
 use notepad::{
     comms,
-    types::{self, FixedPointVector},
+    types::{self, imu},
 };
 use pensel_types::cli;
 
-static mut A_QUEUE: Queue<FixedPointVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
-static mut G_QUEUE: Queue<FixedPointVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
+static mut A_QUEUE: Queue<imu::AccelerationVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
+static mut G_QUEUE: Queue<imu::GravityVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
 fn main() {
     let should_run = Arc::new(AtomicBool::new(true));

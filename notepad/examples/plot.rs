@@ -13,12 +13,12 @@ use textplots::{Chart, ColorPlot, Shape};
 
 use notepad::{
     comms,
-    types::{self, FixedPointVector},
+    types::{self, imu},
 };
 use pensel_types::cli;
 
-static mut A_QUEUE: Queue<FixedPointVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
-static mut G_QUEUE: Queue<FixedPointVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
+static mut A_QUEUE: Queue<imu::AccelerationVector, { types::ACC_QUEUE_SIZE }> = Queue::new();
+static mut G_QUEUE: Queue<imu::GravityVector, { types::GRAV_QUEUE_SIZE }> = Queue::new();
 
 const PURPLE: RGB8 = RGB8::new(0xE0, 0x80, 0xFF);
 const RED: RGB8 = RGB8::new(0xFF, 0x00, 0x00);
