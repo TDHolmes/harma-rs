@@ -73,10 +73,10 @@ fn main() -> ! {
     loop {
         log::trace!("loop");
         // handle our CLI
-        if let Some(new_byte) = cli_bytes_to_write.dequeue() {
+        while let Some(new_byte) = cli_bytes_to_write.dequeue() {
             usb_serial::get(|usbserial| usbserial.write(&[new_byte]));
         }
-        if let Some(new_byte) = serial_read_queue.dequeue() {
+        while let Some(new_byte) = serial_read_queue.dequeue() {
             cli.input_from_serial(new_byte);
         }
 
