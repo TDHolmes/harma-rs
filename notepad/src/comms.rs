@@ -47,7 +47,7 @@ impl PenselSerial {
 
     /// Sends the given command over serial. Currently doesn't check if pensel received it properly
     pub fn send_command(&mut self, command: &str) -> Result<(), serialport::Error> {
-        println!("sending command '{}'", command);
+        log::debug!("sending command {:?}", command);
         self.port.write_all(command.as_bytes())?;
         self.port.write_all("\r".as_bytes())?;
         self.wait_for(command)?;
@@ -62,7 +62,7 @@ impl PenselSerial {
             let size_read = self.port.read(&mut read_buf[write_index..])?;
             let sub_string =
                 std::str::from_utf8(&read_buf[write_index..write_index + size_read]).unwrap();
-            print!("{}", sub_string);
+            log::debug!("wait_for - {:?}", sub_string);
             write_index += size_read;
             let string = std::str::from_utf8(&read_buf[0..write_index]).unwrap();
             if string.contains(line) {
@@ -260,11 +260,11 @@ mod comm_test {
         let (mut accel_received, mut gravity_received) = (false, false);
         while !accel_received || !gravity_received {
             if let Some(a) = a_consumer.dequeue() {
-                println!("A: {:?}", a);
+                log::debug!("A: {:?}", a);
                 accel_received = true;
             }
             if let Some(g) = g_consumer.dequeue() {
-                println!("G: {:?}", g);
+                log::debug!("G: {:?}", g);
                 gravity_received = true;
             }
         }

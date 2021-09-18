@@ -10,8 +10,8 @@ description = ""
 
 [dependencies]
 serialport = "4"
-mint = "0.5"
 heapless = "0.7"
+log = "0.4"
 
 [dependencies.pensel-types]
 path = "../pensel-types"
@@ -21,3 +21,5 @@ textplots = "0.8"
 rgb = "0.8"
 console = "0.14"
 ctrlc = "3"
+clap = "2.33"
+simple_logger = "1"

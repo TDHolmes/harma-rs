@@ -45,12 +45,15 @@ pub mod imu {
         type Err = core::fmt::Error;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
+            const FUNC_NAME: &str = "FixedPointVector::from_str";
             /// checks for a decimal digit
             fn is_decimal_digit(input: char) -> bool {
                 input.is_digit(10) || input == '-'
             }
 
+            log::debug!("{}: parsing {:?}", FUNC_NAME, s);
             if !s.starts_with(P) {
+                log::error!("{}: missing prefix {} in {:#?}", FUNC_NAME, P, s);
                 return Err(core::fmt::Error);
             }
 
@@ -58,6 +61,7 @@ pub mod imu {
             let mut values: [i16; 3] = [0; 3];
             for (count, item) in s.split(',').enumerate() {
                 if count == 3 {
+                    log::error!("{}: Too many comma separated values in {:#?}", FUNC_NAME, s);
                     return Err(core::fmt::Error);
                 }
 
@@ -66,8 +70,16 @@ pub mod imu {
                     let slice_to_parse = item[start_ind..].trim_end();
                     if let Ok(digit) = i16::from_str(slice_to_parse) {
                         values[count] = digit;
+                    } else {
+                        log::error!(
+                            "{}: failed to convert '{}' to i16",
+                            FUNC_NAME,
+                            slice_to_parse
+                        );
+                        return Err(core::fmt::Error);
                     }
                 } else {
+                    log::error!("{}: failed to find a number in {}", FUNC_NAME, item);
                     return Err(core::fmt::Error);
                 }
             }
