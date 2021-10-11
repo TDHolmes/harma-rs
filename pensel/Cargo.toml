@@ -34,7 +34,7 @@ git = "https://github.com/atsamd-rs/atsamd/"
 optional = true
 
 [features]
-default = ["feather-m4"]
+default = []
 feather-m0 = ["feather_m0"]
 feather-m4 = ["feather_m4"]
 
