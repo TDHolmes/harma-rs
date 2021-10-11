@@ -33,16 +33,16 @@ fn main() {
     //   built before this executes so it kinda needs to happen before this
     //   script anyways...
     match target {
-        Target::M0 => {
-            if env::var_os("TARGET").unwrap() != "thumbv6m-none-eabi" {
-                panic!("incorrect target triple for target {:?}", target);
-            }
-        }
-        Target::M4 => {
-            if env::var_os("TARGET").unwrap() != "thumbv7em-none-eabihf" {
-                panic!("incorrect target triple for target {:?}", target);
-            }
-        }
+        Target::M0 => assert!(
+            env::var_os("TARGET").unwrap() == "thumbv6m-none-eabi",
+            "incorrect target triple for target {:?}",
+            target
+        ),
+        Target::M4 => assert!(
+            env::var_os("TARGET").unwrap() == "thumbv7em-none-eabihf",
+            "incorrect target triple for target {:?}",
+            target
+        ),
     }
 
     // Put `memory.x` in our output directory and ensure it's
