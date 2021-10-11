@@ -1,6 +1,6 @@
 //! Manager of all USB serial communication
-use crate::{cli, prelude::*};
-use hal::{clock::GenericClockController, usb::UsbBus};
+use crate::{bal, cli, prelude::*};
+use hal::usb::UsbBus;
 use pac::interrupt;
 
 use core::sync::atomic;
@@ -30,16 +30,9 @@ static USER_PRESENT: atomic::AtomicBool = atomic::AtomicBool::new(false);
 
 impl<'a> UsbSerial<'a> {
     /// Initializes everything we need for USB serial communication
-    fn init(
-        usb: pac::USB,
-        clocks: &mut GenericClockController,
-        nvic: &mut NVIC,
-        pm: &mut pac::PM,
-        dm: impl Into<bsp::UsbDm>,
-        dp: impl Into<bsp::UsbDp>,
-    ) {
+    fn init(nvic: &mut NVIC, usb_allocator: UsbBusAllocator<UsbBus>) {
         let usb_allocator = unsafe {
-            USB_ALLOCATOR = Some(bsp::usb_allocator(usb, clocks, pm, dm, dp));
+            USB_ALLOCATOR = Some(usb_allocator);
             USB_ALLOCATOR.as_ref().unwrap()
         };
         let usb_serial = SerialPort::new(usb_allocator);
@@ -58,8 +51,10 @@ impl<'a> UsbSerial<'a> {
                 usb_serial,
                 usb_dev,
             });
-            nvic.set_priority(interrupt::USB, 1);
-            NVIC::unmask(interrupt::USB);
+            for interrupt in bal::USB_INTERRUPTS {
+                nvic.set_priority(interrupt, 1);
+                NVIC::unmask(interrupt);
+            }
         }
     }
 
@@ -102,15 +97,8 @@ impl<'a> UsbSerial<'a> {
 }
 
 /// Initializes our global singleton
-pub fn init(
-    usb: pac::USB,
-    nvic: &mut NVIC,
-    clocks: &mut GenericClockController,
-    pm: &mut pac::PM,
-    dm: impl Into<bsp::UsbDm>,
-    dp: impl Into<bsp::UsbDp>,
-) {
-    UsbSerial::init(usb, clocks, nvic, pm, dm, dp);
+pub fn init(nvic: &mut NVIC, usb_allocator: UsbBusAllocator<UsbBus>) {
+    UsbSerial::init(nvic, usb_allocator);
 }
 
 /// Checks if a user is present at the serial port by checking if we've received any
@@ -168,11 +156,17 @@ fn usb_free<F, R>(f: F) -> R
 where
     F: FnOnce(&cortex_m::interrupt::CriticalSection) -> R,
 {
-    NVIC::mask(interrupt::USB);
+    for interrupt in bal::USB_INTERRUPTS {
+        NVIC::mask(interrupt);
+    }
 
     let r = f(unsafe { &cortex_m::interrupt::CriticalSection::new() });
 
-    unsafe { NVIC::unmask(interrupt::USB) };
+    for interrupt in bal::USB_INTERRUPTS {
+        unsafe {
+            NVIC::unmask(interrupt);
+        }
+    }
 
     r
 }
@@ -201,9 +195,7 @@ macro_rules! serial_write {
     }};
 }
 
-#[interrupt]
-#[allow(non_snake_case)]
-fn USB() {
+fn poll_usb() {
     let mut buf = [0u8; 64];
     // Safety:
     // `USB_SERIAL`:
@@ -233,4 +225,32 @@ fn USB() {
             }
         }
     }
+}
+
+#[cfg(feature = "feather-m0")]
+#[interrupt]
+#[allow(non_snake_case)]
+fn USB() {
+    poll_usb()
+}
+
+#[cfg(feature = "feather-m4")]
+#[interrupt]
+#[allow(non_snake_case)]
+fn USB_OTHER() {
+    poll_usb();
+}
+
+#[cfg(feature = "feather-m4")]
+#[interrupt]
+#[allow(non_snake_case)]
+fn USB_TRCPT0() {
+    poll_usb();
+}
+
+#[cfg(feature = "feather-m4")]
+#[interrupt]
+#[allow(non_snake_case)]
+fn USB_TRCPT1() {
+    poll_usb();
 }

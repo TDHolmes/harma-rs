@@ -7,9 +7,9 @@ version = "0.1.0"
 description = "Orientation tracking pensel, mainly for robot assisted soldering"
 
 [dependencies]
-cortex-m = "0.6"
-cortex-m-rt = "0.6"
-panic-persist = "0.2"
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+panic-persist = "0.3"
 menu = "0.3"
 embedded-hal = "0.2"
 chek = "0.1"
@@ -26,10 +26,17 @@ path = "../pensel-types"
 [dependencies.feather_m0]
 features = ["unproven", "usb"]
 git = "https://github.com/atsamd-rs/atsamd/"
-# version = "0.9"
+optional = true
+
+[dependencies.feather_m4]
+features = ["unproven", "usb"]
+git = "https://github.com/atsamd-rs/atsamd/"
+optional = true
 
 [features]
-default = []
+default = ["feather-m4"]
+feather-m0 = ["feather_m0"]
+feather-m4 = ["feather_m4"]
 
 [profile.release]
 debug = true        # symbols are nice and they don't increase the size on Flash

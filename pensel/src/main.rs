@@ -1,48 +1,30 @@
 #![no_std]
 #![no_main]
 
-use pensel::{bsp, cli, hal, imu::Imu, pac, usb_serial, usb_serial_log};
+use pensel::{bal, cli, imu::Imu, prelude::*, usb_serial, usb_serial_log};
 
 use panic_persist as _;
 
 use bsp::entry;
-use hal::{clock::GenericClockController, delay::Delay, prelude::*};
+use hal::{delay::Delay, prelude::*};
 use pac::{CorePeripherals, Peripherals};
 
 #[entry]
 fn main() -> ! {
     // initialize core peripherals
-    let mut peripherals = Peripherals::take().unwrap();
+    let peripherals = Peripherals::take().unwrap();
     let mut core = CorePeripherals::take().unwrap();
-    let mut clocks = GenericClockController::with_internal_32kosc(
-        peripherals.GCLK,
-        &mut peripherals.PM,
-        &mut peripherals.SYSCTRL,
-        &mut peripherals.NVMCTRL,
-    );
-    let mut delay = Delay::new(core.SYST, &mut clocks);
+    let (pins, mut board) = bal::Bal::init(peripherals);
 
     // initialize GPIOs
-    let pins = bsp::Pins::new(peripherals.PORT);
     let mut _red_led: bsp::RedLed = pins.d13.into();
-    let i2c = bsp::i2c_master(
-        &mut clocks,
-        400.khz(),
-        peripherals.SERCOM3,
-        &mut peripherals.PM,
-        pins.sda,
-        pins.scl,
-    );
 
-    // initialize USB
-    usb_serial::init(
-        peripherals.USB,
-        &mut core.NVIC,
-        &mut clocks,
-        &mut peripherals.PM,
-        pins.usb_dm,
-        pins.usb_dp,
-    );
+    // initialize clocks/peripherals
+    let i2c = board.i2c(400.khz(), pins.sda, pins.scl);
+    let usb_allocator = board.usb_allocator(pins.usb_dp, pins.usb_dm);
+    let mut delay = Delay::new(core.SYST, &mut board.clocks);
+
+    usb_serial::init(&mut core.NVIC, usb_allocator);
 
     // Wait for us to have the terminal open
     while !usb_serial::user_present() {
