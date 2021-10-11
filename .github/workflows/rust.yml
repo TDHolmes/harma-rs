@@ -24,12 +24,21 @@ jobs:
         override: true
         target: thumbv6m-none-eabi
         components: clippy
+    - name: Install Rust (thumbv7em)
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: nightly
+        override: true
+        target: thumbv7em-none-eabihf
+        components: clippy
     - name: Checkout Sources
       uses: actions/checkout@v2
     - name: Build Pensel
       run: |
         cd pensel
-        cargo build
+        cargo build --features="feather-m0" --target thumbv6m-none-eabi
+        cargo build --features="feather-m4" --target thumbv7em-none-eabihf
     - name: Build notepad
       run: |
         sudo apt-get clean && sudo apt-get update
