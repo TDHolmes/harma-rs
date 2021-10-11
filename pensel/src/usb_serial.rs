@@ -143,7 +143,7 @@ where
     T: Fn(&mut UsbSerial) -> R,
 {
     usb_free(|_| unsafe {
-        let mut usb_serial = USB_SERIAL.as_mut().expect("UsbSerial not initialized");
+        let usb_serial = USB_SERIAL.as_mut().expect("UsbSerial not initialized");
         borrower(usb_serial)
     })
 }
