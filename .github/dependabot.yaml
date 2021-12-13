@@ -11,6 +11,16 @@ updates:
       interval: "daily"
  
   - package-ecosystem: "cargo"
-    directory: "/"
+    directory: "/notepad"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "cargo"
+    directory: "/pensel"
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "cargo"
+    directory: "/pensel-types"
     schedule:
       interval: "daily"
