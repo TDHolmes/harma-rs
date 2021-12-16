@@ -120,7 +120,7 @@ fn main() {
                 .display();
         }
 
-        if should_run.as_ref().load(Ordering::Acquire) == false {
+        if !should_run.as_ref().load(Ordering::Acquire) {
             break;
         }
     }
