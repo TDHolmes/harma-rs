@@ -10,7 +10,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-and-test:
+    name: "Build and Test"
     runs-on: ubuntu-latest
 
     steps:
@@ -50,6 +51,29 @@ jobs:
           cd notepad
           cargo build --bins
           cargo test
+
+  clippy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Rust (thumbv6m)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          target: thumbv6m-none-eabi
+          components: clippy
+      - name: Install Rust (thumbv7em)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          target: thumbv7em-none-eabihf
+          components: clippy
+      - name: Checkout Sources
+        uses: actions/checkout@v2
 
       - name: notepad clippy
         uses: actions-rs/clippy-check@v1
