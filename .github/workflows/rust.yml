@@ -1,77 +1,80 @@
-
 name: Rust
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - name: Install Rust (thumbv6m)
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-        target: thumbv6m-none-eabi
-        components: clippy
-    - name: Install Rust (thumbv7em)
-      uses: actions-rs/toolchain@v1
-      with:
-        profile: minimal
-        toolchain: nightly
-        override: true
-        target: thumbv7em-none-eabihf
-        components: clippy
-    - name: Checkout Sources
-      uses: actions/checkout@v2
-    - name: Build Pensel
-      run: |
-        cd pensel
-        cargo build --features="feather-m0" --target thumbv6m-none-eabi
-        cargo build --features="feather-m4" --target thumbv7em-none-eabihf
+      - name: Install Rust (thumbv6m)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          target: thumbv6m-none-eabi
+          components: clippy
+      - name: Install Rust (thumbv7em)
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+          target: thumbv7em-none-eabihf
+          components: clippy
+      - name: Checkout Sources
+        uses: actions/checkout@v2
 
-    - name: Build notepad
-      run: |
-        sudo apt-get clean && sudo apt-get update
-        sudo apt-get install -y libudev-dev
-        cd notepad
-        cargo build --examples
-        cargo test
+      - name: Build Pensel
+        env:
+          RUSTFLAGS: "-D warnings"
+        run: |
+          cd pensel
+          cargo build --features="feather-m0" --target thumbv6m-none-eabi
+          cargo build --features="feather-m4" --target thumbv7em-none-eabihf
 
-    - name: notepad clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --manifest-path ./notepad/Cargo.toml
-        name: Notepad Clippy
+      - name: Build notepad
+        env:
+          RUSTFLAGS: "-D warnings"
+        run: |
+          sudo apt-get clean && sudo apt-get update
+          sudo apt-get install -y libudev-dev
+          cd notepad
+          cargo build --bins
+          cargo test
 
-    - name: pensel M0 clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --manifest-path ./pensel/Cargo.toml  --features=feather-m0 --target thumbv6m-none-eabi
-        name: Pensel M0 Clippy
+      - name: notepad clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path ./notepad/Cargo.toml
+          name: Notepad Clippy
 
-    - name: pensel M4 clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --manifest-path ./pensel/Cargo.toml  --features=feather-m4 --target thumbv7em-none-eabihf
-        name: Pensel M4 Clippy
+      - name: pensel M0 clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path ./pensel/Cargo.toml  --features=feather-m0 --target thumbv6m-none-eabi
+          name: Pensel M0 Clippy
 
-    - name: pensel-types clippy
-      uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --manifest-path ./pensel-types/Cargo.toml
-        name: Pensel-Types Clippy
+      - name: pensel M4 clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path ./pensel/Cargo.toml  --features=feather-m4 --target thumbv7em-none-eabihf
+          name: Pensel M4 Clippy
+
+      - name: pensel-types clippy
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --manifest-path ./pensel-types/Cargo.toml
+          name: Pensel-Types Clippy
