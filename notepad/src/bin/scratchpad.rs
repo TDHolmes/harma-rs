@@ -31,22 +31,22 @@ fn main() {
 
     let matches = App::new("Scratchpad")
         .arg(
-            Arg::with_name("record")
-                .short("r")
+            Arg::new("record")
+                .short('r')
                 .long("record")
                 .value_name("FILE")
                 .help("Configures for recording to the given file")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("print")
+            Arg::new("print")
                 .long("print")
                 .help("just prints out accel/gravity packets"),
         )
         .arg(
-            Arg::with_name("v")
-                .short("v")
-                .multiple(true)
+            Arg::new("v")
+                .short('v')
+                .multiple_occurrences(true)
                 .help("Sets the level of verbosity"),
         )
         .get_matches();
