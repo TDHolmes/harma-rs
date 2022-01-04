@@ -118,9 +118,10 @@ pub fn get_serial_input_pipe() -> Consumer<'static, u8, { cli::CLI_QUEUE_SIZE }>
     // being non-None & we disable interrupts while we do this check, since the interrupt
     // handler `USB` interacts with `CLI_INPUT_PRODUCER`.
     usb_free(|_| unsafe {
-        if CLI_INPUT_PRODUCER.is_some() {
-            panic!("cannot call get_serial_input_pipe more than once");
-        }
+        assert!(
+            CLI_INPUT_PRODUCER.is_some(),
+            "cannot call get_serial_input_pipe more than once"
+        );
 
         let (producer, consumer) = CLI_INPUT_QUEUE.split();
         CLI_INPUT_PRODUCER = Some(producer);
