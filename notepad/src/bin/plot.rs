@@ -45,7 +45,7 @@ fn main() {
     let (g_producer, mut g_consumer) = unsafe { G_QUEUE.split() };
 
     let _sender = thread::spawn(move || {
-        serial.parse_data_until(a_producer, g_producer, should_run_thread_ref)
+        serial.parse_data_until(a_producer, g_producer, &should_run_thread_ref);
     });
 
     should_run.as_ref().store(true, Ordering::Release);
@@ -76,9 +76,9 @@ fn main() {
             acc_x.copy_within(1..PRINT_LEN, 0);
             acc_y.copy_within(1..PRINT_LEN, 0);
             acc_z.copy_within(1..PRINT_LEN, 0);
-            acc_x[PRINT_LEN - 1] = (0., a.x as f32);
-            acc_y[PRINT_LEN - 1] = (0., a.y as f32);
-            acc_z[PRINT_LEN - 1] = (0., a.z as f32);
+            acc_x[PRINT_LEN - 1] = (0., f32::from(a.x));
+            acc_y[PRINT_LEN - 1] = (0., f32::from(a.y));
+            acc_z[PRINT_LEN - 1] = (0., f32::from(a.z));
             for index in 0..PRINT_LEN {
                 acc_x[index].0 += 1.;
                 acc_y[index].0 += 1.;
@@ -90,9 +90,9 @@ fn main() {
             grav_x.copy_within(1..PRINT_LEN, 0);
             grav_y.copy_within(1..PRINT_LEN, 0);
             grav_z.copy_within(1..PRINT_LEN, 0);
-            grav_x[PRINT_LEN - 1] = (0., g.x as f32);
-            grav_y[PRINT_LEN - 1] = (0., g.y as f32);
-            grav_z[PRINT_LEN - 1] = (0., g.z as f32);
+            grav_x[PRINT_LEN - 1] = (0., f32::from(g.x));
+            grav_y[PRINT_LEN - 1] = (0., f32::from(g.y));
+            grav_z[PRINT_LEN - 1] = (0., f32::from(g.z));
             for index in 0..PRINT_LEN {
                 grav_x[index].0 += 1.;
                 grav_y[index].0 += 1.;

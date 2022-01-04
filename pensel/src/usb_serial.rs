@@ -109,6 +109,10 @@ pub fn user_present() -> bool {
 
 /// Gets the consumer end of the `heapless::spsc` queue for consuming bytes coming from
 /// the serial port.
+///
+/// # Panics
+/// If you call this more than once.
+#[must_use]
 pub fn get_serial_input_pipe() -> Consumer<'static, u8, { cli::CLI_QUEUE_SIZE }> {
     // Safety: Guaranteed to only do this once due to the check for `CLI_INPUT_PRODUCER`
     // being non-None & we disable interrupts while we do this check, since the interrupt
@@ -196,7 +200,7 @@ macro_rules! serial_write {
 }
 
 fn poll_usb() {
-    let mut buf = [0u8; 64];
+    let mut buf = [0_u8; 64];
     // Safety:
     // `USB_SERIAL`:
     // Only interrupt handler that accesses it. thread access is only done
@@ -231,7 +235,7 @@ fn poll_usb() {
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB() {
-    poll_usb()
+    poll_usb();
 }
 
 #[cfg(feature = "feather-m4")]

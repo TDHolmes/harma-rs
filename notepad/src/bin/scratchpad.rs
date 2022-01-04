@@ -59,7 +59,6 @@ fn main() {
         0 => log::Level::Warn,
         1 => log::Level::Info,
         2 => log::Level::Debug,
-        3 => log::Level::Trace,
         _ => log::Level::Trace,
     };
     simple_logger::init_with_level(level).unwrap();
@@ -87,7 +86,7 @@ fn main() {
     })
     .unwrap();
     let _sender = thread::spawn(move || {
-        serial.parse_data_until(a_producer, g_producer, should_run_thread_ref)
+        serial.parse_data_until(a_producer, g_producer, &should_run_thread_ref);
     });
 
     // Do the action until we're told to stop

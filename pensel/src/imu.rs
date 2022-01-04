@@ -63,7 +63,7 @@ where
         bno.set_calibration_profile(BNO055_CALIBRATION, delay)
             .expect("set_calibration_profile fail");
 
-        Imu { bno }
+        Self { bno }
     }
 
     /// Retrieves the current gravity vector as calculated by the bno055
@@ -72,8 +72,6 @@ where
             log::debug!("IMU - gravity_fixed");
             if let Ok(g_vec) = self.bno.gravity_fixed() {
                 return Some(g_vec.into());
-            } else {
-                return None;
             }
         }
 
@@ -86,8 +84,6 @@ where
             log::debug!("IMU - linear_acceleration_fixed");
             if let Ok(a_vec) = self.bno.linear_acceleration_fixed() {
                 return Some(a_vec.into());
-            } else {
-                return None;
             }
         }
 
@@ -96,10 +92,10 @@ where
 }
 
 fn imu_control<const N: usize>(
-    _menu: &menu::Menu<cli::CliOutput<N>>,
-    item: &menu::Item<cli::CliOutput<N>>,
+    _menu: &menu::Menu<cli::Output<N>>,
+    item: &menu::Item<cli::Output<N>>,
     args: &[&str],
-    _context: &mut cli::CliOutput<N>,
+    _context: &mut cli::Output<N>,
 ) {
     let mut enable_accel = false;
     let mut enable_grav = false;
@@ -116,7 +112,7 @@ fn imu_control<const N: usize>(
 }
 
 /// Method to put our CLI entry in for IMU control
-pub const IMU_CLI_ITEM: cli::CliItem = cli::CliItem {
+pub const IMU_CLI_ITEM: cli::Item = cli::Item {
     item_type: menu::ItemType::Callback {
         function: imu_control,
         parameters: &[
