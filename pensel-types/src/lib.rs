@@ -2,9 +2,9 @@
 #![cfg_attr(not(test), no_std)]
 #![warn(missing_docs)]
 
-/// re-export of bno055 for downstream crates
+/// re-export of [`bno055`] for downstream crates
 pub use bno055;
-/// re-export of bno055::mint for downstream crates
+/// re-export of [`bno055::mint`] for downstream crates
 pub use bno055::mint;
 
 pub mod cli {
@@ -96,7 +96,8 @@ pub mod imu {
 
     impl<const P: char> FixedPointVector<P> {
         /// Initializes a new `FixedPointVector`.
-        pub fn new(x: i16, y: i16, z: i16) -> FixedPointVector<P> {
+        #[must_use]
+        pub const fn new(x: i16, y: i16, z: i16) -> Self {
             Self(bno055::mint::Vector3::<i16> { x, y, z })
         }
     }

@@ -1,6 +1,6 @@
 use super::BoardAbstractionLayer;
 use crate::prelude::*;
-use hal::{clock::GenericClockController, time::*, usb::UsbBus};
+use hal::{clock::GenericClockController, time::Hertz, usb::UsbBus};
 
 use usb_device::class_prelude::UsbBusAllocator;
 
@@ -29,7 +29,7 @@ impl BoardAbstractionLayer for Bal {
 
         (
             pins,
-            Bal {
+            Self {
                 mclk: peripherals.MCLK,
                 i2c_sercom: Some(peripherals.SERCOM2),
                 usb: Some(peripherals.USB),

@@ -13,8 +13,8 @@ struct UsbSerialLogger {
 static LOGGER: UsbSerialLogger = UsbSerialLogger::new();
 
 impl UsbSerialLogger {
-    const fn new() -> UsbSerialLogger {
-        UsbSerialLogger {
+    const fn new() -> Self {
+        Self {
             // 0 is not a valid log level, but can't seem to initialize here for some reason, so do it later in `init`
             enabled_level: atomic::AtomicUsize::new(0),
         }
@@ -53,11 +53,11 @@ impl log::Log for UsbSerialLogger {
     fn log(&self, record: &Record) {
         if self.enabled(record.metadata()) {
             let level = record.level();
-            if level != Level::Info {
-                usb_serial::get(|_| serial_write!("{}: {}\n", record.level(), record.args()));
-            } else {
+            if level == Level::Info {
                 // leave INFO prefix off for expected normal output
                 usb_serial::get(|_| serial_write!("{}\n", record.args()));
+            } else {
+                usb_serial::get(|_| serial_write!("{}: {}\n", record.level(), record.args()));
             }
         }
     }
@@ -65,17 +65,20 @@ impl log::Log for UsbSerialLogger {
     fn flush(&self) {}
 }
 
-/// Initializes the USB serial based logger
+/// Initializes the USB serial based logger.
+///
+/// # Errors
+/// If the underlying logger has already been initialized.
 pub fn init() -> Result<(), SetLoggerError> {
-    #[cfg(debug_assertions)]
-    let max_level = LevelFilter::Trace;
-    #[cfg(not(debug_assertions))]
-    let max_level = LevelFilter::Debug;
-
     #[cfg(debug_assertions)]
     const LEVEL: Level = Level::Debug;
     #[cfg(not(debug_assertions))]
     const LEVEL: Level = Level::Info;
+
+    #[cfg(debug_assertions)]
+    let max_level = LevelFilter::Trace;
+    #[cfg(not(debug_assertions))]
+    let max_level = LevelFilter::Debug;
 
     LOGGER.set_level(LEVEL);
     cortex_m::interrupt::free(|_| unsafe {
@@ -84,10 +87,10 @@ pub fn init() -> Result<(), SetLoggerError> {
 }
 
 fn log_control<const N: usize>(
-    _menu: &menu::Menu<cli::CliOutput<N>>,
-    item: &menu::Item<cli::CliOutput<N>>,
+    _menu: &menu::Menu<cli::Output<N>>,
+    item: &menu::Item<cli::Output<N>>,
     args: &[&str],
-    context: &mut cli::CliOutput<N>,
+    context: &mut cli::Output<N>,
 ) {
     use core::fmt::Write;
 
@@ -113,7 +116,7 @@ fn log_control<const N: usize>(
 }
 
 /// Method to put our CLI entry in for IMU control
-pub const LOG_CLI_ITEM: cli::CliItem = cli::CliItem {
+pub const LOG_CLI_ITEM: cli::Item = cli::Item {
     item_type: menu::ItemType::Callback {
         function: log_control,
         parameters: &[

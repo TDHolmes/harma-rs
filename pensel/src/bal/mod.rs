@@ -23,7 +23,7 @@ pub trait BoardAbstractionLayer {
     /// This board's concrete pins type
     type Pins;
 
-    /// Initializes our BoardAbstractionLayer struct
+    /// Initializes our [`BoardAbstractionLayer`] struct
     fn init(peripherals: pac::Peripherals) -> (Self::Pins, Self);
 
     /// Initializes this board's I2C peripheral and returns it, consuming those pins.

@@ -18,38 +18,50 @@ pub struct PenselSerial {
 }
 
 impl PenselSerial {
-    /// Creates a new instance of PenselSerial from the provided serial port trait object
-    pub fn new(port: Box<dyn serialport::SerialPort>) -> PenselSerial {
-        PenselSerial { port }
+    /// Creates a new instance of [`PenselSerial`] from the provided serial port trait object.
+    #[must_use]
+    pub fn new(port: Box<dyn serialport::SerialPort>) -> Self {
+        Self { port }
     }
 
-    /// Creates a new instance of PenselSerial from a port named `name`
-    pub fn new_from_name(name: &str) -> PenselSerial {
+    /// Creates a new instance of [`PenselSerial`] from a port named `name`.
+    ///
+    /// # Panics
+    /// If we fail to open the port specified.
+    #[must_use]
+    pub fn new_from_name(name: &str) -> Self {
         let port = serialport::new(name, 115_200)
             .timeout(std::time::Duration::from_millis(10))
             .open()
             .expect("Failed to open port");
 
-        PenselSerial::new(port)
+        Self::new(port)
     }
 
-    /// Makes a new instance of PenselSerial from the first serial port with `PENSEL` in its name
-    pub fn new_first_matching() -> PenselSerial {
+    /// Makes a new instance of [`PenselSerial`] from the first serial port with `PENSEL` in its name.
+    ///
+    /// # Panics
+    /// If we cannot find a matching port or none are available.
+    #[must_use]
+    pub fn new_first_matching() -> Self {
         let ports = serialport::available_ports().expect("No ports found!");
         for p in ports {
             if p.port_name.contains("PENSEL") {
-                return PenselSerial::new_from_name(&p.port_name);
+                return Self::new_from_name(&p.port_name);
             }
         }
 
         panic!("no matching port found");
     }
 
-    /// Sends the given command over serial. Currently doesn't check if pensel received it properly
+    /// Sends the given command over serial. Currently doesn't check if pensel received it properly.
+    ///
+    /// # Errors
+    /// If we fail to write out the command bytes or error out while waiting for a response.
     pub fn send_command(&mut self, command: &str) -> Result<(), serialport::Error> {
         log::debug!("sending command {:?}", command);
         self.port.write_all(command.as_bytes())?;
-        self.port.write_all("\r".as_bytes())?;
+        self.port.write_all(b"\r")?;
         self.wait_for(command)?;
         Ok(())
     }
@@ -77,7 +89,9 @@ impl PenselSerial {
         }
     }
 
-    pub fn parse_line(&self, line: &str) -> types::ParsedLine {
+    #[must_use]
+    /// Parses `line` into [`types::ParsedLine`].
+    pub fn parse_line(line: &str) -> types::ParsedLine {
         if line.starts_with(ACCEL_PREFIX) {
             if let Ok(accel) = types::imu::AccelerationVector::from_str(line) {
                 return types::ParsedLine::Accel(accel);
@@ -91,11 +105,15 @@ impl PenselSerial {
         types::ParsedLine::None
     }
 
+    /// Parses data into `accel_queue` and `grav_queue` as long as `should_run` is `true`.
+    ///
+    /// # Panics
+    /// If we get non UTF-8 compliant characters from the underlying serial port.
     pub fn parse_data_until(
         &mut self,
         mut accel_queue: Producer<types::imu::AccelerationVector, { types::ACC_QUEUE_SIZE }>,
         mut grav_queue: Producer<types::imu::GravityVector, { types::GRAV_QUEUE_SIZE }>,
-        should_run: Arc<AtomicBool>,
+        should_run: &Arc<AtomicBool>,
     ) {
         let mut serial_read_buf: [u8; 128] = [0; 128];
         let mut write_index: usize = 0;
@@ -113,10 +131,11 @@ impl PenselSerial {
                 }
             }
 
-            let str_to_search = std::str::from_utf8(&serial_read_buf[0..write_index]).unwrap();
+            let str_to_search = std::str::from_utf8(&serial_read_buf[0..write_index])
+                .expect("non UTF-8 compliant characters received");
             for line in str_to_search.lines() {
                 let mut parsed = true;
-                let parsed_line = self.parse_line(line);
+                let parsed_line = Self::parse_line(line);
                 match parsed_line {
                     types::ParsedLine::Accel(acc) => accel_queue.enqueue(acc).unwrap_or(()),
                     types::ParsedLine::Grav(grav) => grav_queue.enqueue(grav).unwrap_or(()),
@@ -167,10 +186,7 @@ mod comm_test {
 
     #[test]
     fn parse_accel() {
-        let port = Box::new(MockSerial::default());
-        let comm = PenselSerial::new(port);
-
-        let res = comm.parse_line(EXAMPLE_ACCEL_LINE);
+        let res = PenselSerial::parse_line(EXAMPLE_ACCEL_LINE);
         let accel_pkt = match res {
             types::ParsedLine::Accel(g) => g,
             _ => panic!(
@@ -186,10 +202,7 @@ mod comm_test {
 
     #[test]
     fn parse_grav() {
-        let port = Box::new(MockSerial::default());
-        let comm = PenselSerial::new(port);
-
-        let res = comm.parse_line(EXAMPLE_GRAVITY_LINE);
+        let res = PenselSerial::parse_line(EXAMPLE_GRAVITY_LINE);
         let grav_pkt = match res {
             types::ParsedLine::Grav(g) => g,
             _ => panic!(
@@ -205,10 +218,7 @@ mod comm_test {
 
     #[test]
     fn parse_grav_neg() {
-        let port = Box::new(MockSerial::default());
-        let comm = PenselSerial::new(port);
-
-        let res = comm.parse_line(EXAMPLE_GRAVITY_LINE_NEG);
+        let res = PenselSerial::parse_line(EXAMPLE_GRAVITY_LINE_NEG);
         let grav_pkt = match res {
             types::ParsedLine::Grav(g) => g,
             _ => panic!(
@@ -224,11 +234,8 @@ mod comm_test {
 
     #[test]
     fn parse_garbage() {
-        let port = Box::new(MockSerial::default());
-        let comm = PenselSerial::new(port);
-
         let garbage_line = "derpy derp\n";
-        let res = comm.parse_line(garbage_line);
+        let res = PenselSerial::parse_line(garbage_line);
         match res {
             types::ParsedLine::None => (),
             _ => panic!("Line '{}' parsed incorrectly to {:#?}", garbage_line, res),
@@ -254,7 +261,7 @@ mod comm_test {
         let (g_producer, mut g_consumer) = unsafe { G_QUEUE.split() };
 
         let sender = std::thread::spawn(move || {
-            serial.parse_data_until(a_producer, g_producer, should_run_thread_ref)
+            serial.parse_data_until(a_producer, g_producer, &should_run_thread_ref);
         });
 
         let (mut accel_received, mut gravity_received) = (false, false);
