@@ -31,22 +31,22 @@ fn main() {
 
     let matches = App::new("Scratchpad")
         .arg(
-            Arg::with_name("record")
-                .short("r")
+            Arg::new("record")
+                .short('r')
                 .long("record")
                 .value_name("FILE")
                 .help("Configures for recording to the given file")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("print")
+            Arg::new("print")
                 .long("print")
                 .help("just prints out accel/gravity packets"),
         )
         .arg(
-            Arg::with_name("v")
-                .short("v")
-                .multiple(true)
+            Arg::new("v")
+                .short('v')
+                .multiple_occurrences(true)
                 .help("Sets the level of verbosity"),
         )
         .get_matches();
@@ -59,7 +59,8 @@ fn main() {
         0 => log::Level::Warn,
         1 => log::Level::Info,
         2 => log::Level::Debug,
-        3 | _ => log::Level::Trace,
+        3 => log::Level::Trace,
+        _ => log::Level::Trace,
     };
     simple_logger::init_with_level(level).unwrap();
 
@@ -97,22 +98,22 @@ fn main() {
             let mut file = File::create(filepath).unwrap();
             while should_run.as_ref().load(Ordering::Acquire) {
                 if let Some(a) = a_consumer.dequeue() {
-                    write!(file, "{}\n", a).unwrap();
+                    writeln!(file, "{}", a).unwrap();
                 }
                 if let Some(g) = g_consumer.dequeue() {
-                    write!(file, "{}\n", g).unwrap();
+                    writeln!(file, "{}", g).unwrap();
                 }
             }
         }
 
         Mode::Print => {
-            println!("printinf...");
+            println!("printing...");
             while should_run.as_ref().load(Ordering::Acquire) {
                 if let Some(a) = a_consumer.dequeue() {
-                    println!("{}\n", a);
+                    println!("{}", a);
                 }
                 if let Some(g) = g_consumer.dequeue() {
-                    println!("{}\n", g);
+                    println!("{}", g);
                 }
             }
         }

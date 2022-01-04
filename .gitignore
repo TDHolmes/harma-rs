@@ -1,16 +1,29 @@
+# Rust stuff
 **/*.rs.bk
 .#*
 .gdb_history
 Cargo.lock
 target/
 
-# editor files
-.vscode/*
-!.vscode/*.md
-!.vscode/*.svd
-!.vscode/launch.json
-!.vscode/tasks.json
-!.vscode/extensions.json
-
 # OS stuff
 .DS_Store
+
+# Python stuff
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+wheels/
+*.egg-info/
