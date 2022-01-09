@@ -92,14 +92,14 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --manifest-path ./pensel/Cargo.toml  --features=feather-m0 --target thumbv6m-none-eabi -- -W clippy::pedantic -W clippy::nursery
+          args: --manifest-path ./pensel/Cargo.toml  --features=feather_m0 --target thumbv6m-none-eabi -- -W clippy::pedantic -W clippy::nursery
           name: Pensel M0 Clippy
 
       - name: pensel M4 clippy
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --manifest-path ./pensel/Cargo.toml  --features=feather-m4 --target thumbv7em-none-eabihf -- -W clippy::pedantic -W clippy::nursery
+          args: --manifest-path ./pensel/Cargo.toml  --features=feather_m4 --target thumbv7em-none-eabihf -- -W clippy::pedantic -W clippy::nursery
           name: Pensel M4 Clippy
 
       - name: pensel-types clippy

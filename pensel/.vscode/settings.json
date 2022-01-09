@@ -1,0 +1,13 @@
+{
+    "editor.formatOnSave": true,
+    "rust-analyzer.cargo.target": "thumbv7em-none-eabihf",
+    "rust-analyzer.cargo.features": [
+        "feather_m4"
+    ],
+    "rust-analyzer.cargo.allFeatures": false,
+    "rust-analyzer.cargo.unsetTest": [
+        "core",
+        "pensel",
+        "*"
+    ]
+}

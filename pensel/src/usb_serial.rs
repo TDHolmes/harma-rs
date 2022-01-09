@@ -232,28 +232,28 @@ fn poll_usb() {
     }
 }
 
-#[cfg(feature = "feather-m0")]
+#[cfg(feature = "feather_m0")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB() {
     poll_usb();
 }
 
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB_OTHER() {
     poll_usb();
 }
 
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB_TRCPT0() {
     poll_usb();
 }
 
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB_TRCPT1() {

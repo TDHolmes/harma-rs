@@ -3,17 +3,17 @@ use crate::prelude::*;
 use hal::{time::Hertz, usb::UsbBus};
 use usb_device::class_prelude::UsbBusAllocator;
 
-#[cfg(feature = "feather-m0")]
+#[cfg(feature = "feather_m0")]
 mod m0;
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 mod m4;
 
-#[cfg(feature = "feather-m0")]
+#[cfg(feature = "feather_m0")]
 pub use m0::*;
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 pub use m4::*;
 
-#[cfg(all(feature = "feather-m0", feature = "feather-m4"))]
+#[cfg(all(feature = "feather_m0", feature = "feather_m4"))]
 compile_error!("Must select one and only one board!");
 
 /// The abstraction layer for working between board types
