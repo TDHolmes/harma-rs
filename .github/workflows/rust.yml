@@ -34,7 +34,7 @@ jobs:
           target: thumbv7em-none-eabihf
           components: clippy
       - name: Checkout Sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Update USB Drivers
         run: |
@@ -74,7 +74,7 @@ jobs:
           target: thumbv7em-none-eabihf
           components: clippy
       - name: Checkout Sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Update USB Drivers
         run: |
