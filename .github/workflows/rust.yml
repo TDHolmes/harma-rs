@@ -44,8 +44,8 @@ jobs:
       - name: Build Pensel
         run: |
           cd pensel
-          cargo build --features="feather-m0" --target thumbv6m-none-eabi
-          cargo build --features="feather-m4" --target thumbv7em-none-eabihf
+          cargo build --features="feather_m0" --target thumbv6m-none-eabi
+          cargo build --features="feather_m4" --target thumbv7em-none-eabihf
 
       - name: Build notepad
         run: |
