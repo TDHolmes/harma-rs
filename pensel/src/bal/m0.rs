@@ -14,7 +14,7 @@ pub struct Bal {
 }
 
 impl BoardAbstractionLayer for Bal {
-    type I2C = bsp::I2C;
+    type I2C = bsp::I2c;
     type Pins = bsp::Pins;
 
     fn init(mut peripherals: pac::Peripherals) -> (Self::Pins, Self) {

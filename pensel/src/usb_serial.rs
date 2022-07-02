@@ -196,7 +196,7 @@ macro_rules! serial_write {
 
         let mut s: heapless::String<64> = heapless::String::new();
         core::write!(&mut s, $($tt)*).unwrap();
-        crate::usb_serial::get(|usbserial| { usbserial.write_str(s.as_str()); });
+        $crate::usb_serial::get(|usbserial| { usbserial.write_str(s.as_str()); });
     }};
 }
 
@@ -232,28 +232,28 @@ fn poll_usb() {
     }
 }
 
-#[cfg(feature = "feather-m0")]
+#[cfg(feature = "feather_m0")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB() {
     poll_usb();
 }
 
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB_OTHER() {
     poll_usb();
 }
 
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB_TRCPT0() {
     poll_usb();
 }
 
-#[cfg(feature = "feather-m4")]
+#[cfg(feature = "feather_m4")]
 #[interrupt]
 #[allow(non_snake_case)]
 fn USB_TRCPT1() {

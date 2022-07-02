@@ -35,8 +35,6 @@ optional = true
 
 [features]
 default = []
-feather-m0 = ["feather_m0"]
-feather-m4 = ["feather_m4"]
 
 [profile.release]
 debug = true        # symbols are nice and they don't increase the size on Flash
