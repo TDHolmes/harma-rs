@@ -38,7 +38,7 @@ pub mod imu {
 
     /// A fixed point 3D vector coming from pensel. Could be linear acceleration or gravity.
     #[repr(transparent)]
-    #[derive(Debug, PartialEq, derive_more::From, derive_more::Deref)]
+    #[derive(Debug, PartialEq, Eq, derive_more::From, derive_more::Deref)]
     pub struct FixedPointVector<const PREFIX: char>(bno055::mint::Vector3<i16>);
 
     impl<const P: char> core::str::FromStr for FixedPointVector<P> {
@@ -47,8 +47,8 @@ pub mod imu {
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             const FUNC_NAME: &str = "FixedPointVector::from_str";
             /// checks for a decimal digit
-            fn is_decimal_digit(input: char) -> bool {
-                input.is_digit(10) || input == '-'
+            const fn is_decimal_digit(input: char) -> bool {
+                input.is_ascii_digit() || input == '-'
             }
 
             log::debug!("{}: parsing {:?}", FUNC_NAME, s);

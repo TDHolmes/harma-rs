@@ -196,7 +196,7 @@ macro_rules! serial_write {
 
         let mut s: heapless::String<64> = heapless::String::new();
         core::write!(&mut s, $($tt)*).unwrap();
-        crate::usb_serial::get(|usbserial| { usbserial.write_str(s.as_str()); });
+        $crate::usb_serial::get(|usbserial| { usbserial.write_str(s.as_str()); });
     }};
 }
 

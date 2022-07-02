@@ -4,7 +4,7 @@
 pub use pensel_types::imu;
 
 /// The possible outcomes of parsing a line of data from Pensel
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum ParsedLine {
     None,
     Grav(imu::GravityVector),
