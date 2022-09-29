@@ -16,7 +16,7 @@ textplots = "0.8"
 rgb = "0.8"
 console = "0.15"
 ctrlc = "3"
-clap = "3"
+clap = "4"
 simple_logger = "2"
 
 [dependencies.pensel-types]
