@@ -1,5 +1,5 @@
 //! Example that just prints all packets
-use clap::{App, Arg};
+use clap::{Arg, ArgAction, Command};
 use heapless::spsc::Queue;
 
 use std::{
@@ -29,33 +29,33 @@ enum Mode {
 fn main() {
     let mut mode = Mode::Record;
 
-    let matches = App::new("Scratchpad")
+    let matches = Command::new("Scratchpad")
         .arg(
             Arg::new("record")
                 .short('r')
                 .long("record")
                 .value_name("FILE")
-                .help("Configures for recording to the given file")
-                .takes_value(true),
+                .help("Configures for recording to the given file"),
         )
         .arg(
             Arg::new("print")
                 .long("print")
-                .help("just prints out accel/gravity packets"),
+                .help("just prints out accel/gravity packets")
+                .action(ArgAction::SetTrue),
         )
         .arg(
             Arg::new("v")
                 .short('v')
-                .multiple_occurrences(true)
+                .action(ArgAction::Count)
                 .help("Sets the level of verbosity"),
         )
         .get_matches();
 
-    if matches.is_present("print") {
+    if matches.get_flag("print") {
         mode = Mode::Print;
     }
 
-    let level = match matches.occurrences_of("v") {
+    let level = match matches.get_count("v") {
         0 => log::Level::Warn,
         1 => log::Level::Info,
         2 => log::Level::Debug,
@@ -93,7 +93,7 @@ fn main() {
     match mode {
         Mode::Record => {
             println!("recording...");
-            let filepath = matches.value_of("record").unwrap();
+            let filepath = matches.get_one::<String>("record").unwrap();
             let mut file = File::create(filepath).unwrap();
             while should_run.as_ref().load(Ordering::Acquire) {
                 if let Some(a) = a_consumer.dequeue() {
