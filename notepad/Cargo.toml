@@ -17,7 +17,7 @@ rgb = "0.8"
 console = "0.15"
 ctrlc = "3"
 clap = "4"
-simple_logger = "2"
+simple_logger = "4"
 
 [dependencies.pensel-types]
 path = "../pensel-types"
