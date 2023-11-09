@@ -8,7 +8,7 @@ description = ""
 
 [dependencies]
 serialport = "4"
-heapless = "0.7"
+heapless = "0.8"
 log = "0.4"
 
 # bin dependencies
