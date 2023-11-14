@@ -16,7 +16,7 @@ chek = "0.1"
 
 # dependencies for usb serial printing
 usb-device = "0.2"
-usbd-serial = "0.1"
+usbd-serial = "0.2"
 heapless = "0.7"
 log = "0.4"
 
