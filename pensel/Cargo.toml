@@ -10,7 +10,7 @@ description = "Orientation tracking pensel, mainly for robot assisted soldering"
 cortex-m = "0.7"
 cortex-m-rt = "0.7"
 panic-persist = "0.3"
-menu = "0.3"
+menu = "0.4"
 embedded-hal = "0.2"
 chek = "0.1"
 
